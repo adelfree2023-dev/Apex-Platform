@@ -5,31 +5,17 @@
     "scripts": {
         "dev": "ts-node src/index.ts",
         "build": "tsc",
-        "start": "node dist/index.js",
-        "migration:generate": "vendure migrate",
-        "migration:run": "vendure migrate"
+        "start": "node dist/index.js"
     },
     "dependencies": {
         "@vendure/core": "3.0.5",
         "@vendure/admin-ui-plugin": "3.0.5",
         "@vendure/asset-server-plugin": "3.0.5",
-        "@nestjs/common": "10.3.0",
-        "@nestjs/core": "10.3.0",
-        "@nestjs/platform-express": "10.3.0",
-        "pg": "^8.11.3",
-        "reflect-metadata": "^0.1.14",
-        "rxjs": "^7.8.1"
+        "pg": "^8.11.3"
     },
     "devDependencies": {
         "@types/node": "^20.10.6",
         "typescript": "~5.3.3",
         "ts-node": "^10.9.2"
-    },
-    "pnpm": {
-        "overrides": {
-            "@nestjs/common": "10.3.0",
-            "@nestjs/core": "10.3.0",
-            "@nestjs/platform-express": "10.3.0"
-        }
     }
 }
