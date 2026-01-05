@@ -1,0 +1,23 @@
+{
+    "name": "@apex/engine",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "ts-node src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "migration:generate": "ts-node node_modules/@vendure/core/cli.js migration:generate",
+        "migration:run": "ts-node node_modules/@vendure/core/cli.js migration:run"
+    },
+    "dependencies": {
+        "@vendure/core": "^3.0.0",
+        "@vendure/admin-ui-plugin": "^3.0.0",
+        "@vendure/asset-server-plugin": "^3.0.0",
+        "pg": "^8.11.3"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.6",
+        "typescript": "^5.3.3",
+        "ts-node": "^10.9.2"
+    }
+}

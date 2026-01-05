@@ -1,0 +1,154 @@
+// This is your Prisma schema file for the SaaS Manager
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+/// Business vertical types (future-proofing for expansion)
+enum BusinessType {
+  RETAIL   // E-commerce stores (current focus)
+  SERVICE  // Service booking (future: salons, consultants)
+  BOOKING  // Appointment scheduling (future: hotels, events)
+}
+
+/// Tenant status
+enum TenantStatus {
+  ACTIVE    // Active and operational
+  TRIAL     // Trial period
+  SUSPENDED // Temporarily suspended
+  CANCELLED // Subscription cancelled
+}
+
+/// User roles
+enum UserRole {
+  SUPER_ADMIN   // Platform owner (HQ)
+  TENANT_ADMIN  // Merchant owner
+  TENANT_STAFF  // Merchant team member
+  CUSTOMER      // End customer
+}
+
+/// License status
+enum LicenseStatus {
+  ACTIVE  // License is active
+  EXPIRED // License has expired
+  REVOKED // License was revoked
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+/// Tenant (Merchant) - Each tenant has their own store
+model Tenant {
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  name      String
+  domain    String?      @unique // Custom domain (optional)
+  type      BusinessType @default(RETAIL)
+  status    TenantStatus @default(TRIAL)
+
+  // Vendure Integration
+  vendureChannelId    String? @unique
+  vendureChannelToken String? @unique
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  license License?
+  users   TenantUser[]
+
+  @@map("tenants")
+}
+
+/// License for each tenant
+model License {
+  id        String        @id @default(cuid())
+  key       String        @unique
+  status    LicenseStatus @default(ACTIVE)
+  expiresAt DateTime?
+  
+  // Plan info
+  planId    String?
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastUsedAt  DateTime?
+
+  // Relations
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("licenses")
+}
+
+/// Users (can belong to multiple tenants)
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         UserRole @default(CUSTOMER)
+  isActive     Boolean  @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenants TenantUser[]
+
+  @@map("users")
+}
+
+/// Junction table for User-Tenant relationship
+model TenantUser {
+  id       String   @id @default(cuid())
+  role     UserRole @default(TENANT_STAFF)
+  joinedAt DateTime @default(now())
+
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@map("tenant_users")
+}
+
+/// Audit logs for security and debugging
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entityType String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  
+  // Relations
+  userId    String?
+  tenantId  String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
