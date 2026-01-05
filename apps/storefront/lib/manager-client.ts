@@ -1,4 +1,4 @@
-const MANAGER_API = 'http://127.0.0.1:3000/api'; // تصحيح البورت إلى 3000
+const MANAGER_API = process.env.MANAGER_API_URL || 'http://127.0.0.1:3005/api'; // Manager API (Server-Side)
 
 export interface Tenant {
   id: string;
@@ -20,14 +20,14 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 
   console.log(`🔍 Verifying tenant: ${slug}`);
   try {
-    const res = await fetch(`${MANAGER_API}/tenants/slug/${slug}`, { 
+    const res = await fetch(`${MANAGER_API}/tenants/slug/${slug}`, {
       cache: 'no-store',
-      next: { revalidate: 60 } 
+      next: { revalidate: 60 }
     });
-    
+
     if (res.status === 404) return null;
     if (!res.ok) return null;
-    
+
     return res.json();
   } catch (e) {
     console.error(`❌ Check failed for ${slug}`, e);
