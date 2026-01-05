@@ -1,11 +1,12 @@
-import { Injectable, Logger, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { VendureService } from '../vendure/vendure.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto/tenant.dto';
-import { Tenant, TenantStatus } from '@prisma/client';
+import { VendureService } from '../vendure/vendure.service';
+import * as bcrypt from 'bcrypt';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
-export class TenantsService {
+export class TenantsService implements OnModuleInit {
     private readonly logger = new Logger(TenantsService.name);
 
     constructor(
@@ -13,156 +14,212 @@ export class TenantsService {
         private readonly vendureService: VendureService,
     ) { }
 
-    /**
-     * Create a new tenant with Vendure channel integration
-     * This is the CORE integration point
-     */
-    async create(dto: CreateTenantDto): Promise<{ tenant: Tenant; channel: any }> {
-        // Generate slug from name if not provided
-        const slug = dto.slug || this.generateSlug(dto.name);
+    async onModuleInit() {
+        this.logger.log('🚀 Tenants Module Initialized');
+    }
 
-        // Check if slug already exists
-        const existing = await this.prisma.tenant.findUnique({ where: { slug } });
-        if (existing) {
-            throw new ConflictException(`Tenant with slug "${slug}" already exists`);
+    async create(createTenantDto: CreateTenantDto) {
+        let slug = createTenantDto.slug;
+        if (!slug) {
+            slug = this.generateSlug(createTenantDto.name);
         }
 
-        this.logger.log(`📦 Creating tenant: ${dto.name} (${slug})`);
+        const { adminEmail, adminPassword, adminName, ...rest } = createTenantDto;
 
-        // Step 1: Create tenant in database (without Vendure info)
-        let tenant = await this.prisma.tenant.create({
-            data: {
-                name: dto.name,
-                slug,
-                domain: dto.domain,
-                type: dto.type || 'RETAIL',
-                status: TenantStatus.TRIAL,
-            },
-        });
+        const existingTenant = await this.prisma.tenant.findUnique({ where: { slug } });
+        if (existingTenant) {
+            throw new Error(`Tenant with slug "${slug}" already exists`);
+        }
 
-        this.logger.log(`✅ Tenant created in DB: ${tenant.id}`);
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-        // Step 2: Create Channel in Vendure
-        try {
-            const channel = await this.vendureService.createChannel(slug, dto.name);
-
-            // Step 3: Update tenant with Vendure channel info
-            tenant = await this.prisma.tenant.update({
-                where: { id: tenant.id },
+        const result = await this.prisma.$transaction(async (prisma) => {
+            const tenant = await prisma.tenant.create({
                 data: {
-                    vendureChannelId: channel.id,
-                    vendureChannelToken: channel.token,
+                    name: rest.name,
+                    slug: slug as string,
+                    domain: rest.domain,
+                    type: rest.type,
+                    status: 'ACTIVE',
                 },
             });
 
-            this.logger.log(`🎉 INTEGRATION SUCCESS!`);
-            this.logger.log(`   Tenant ID: ${tenant.id}`);
-            this.logger.log(`   Channel ID: ${channel.id}`);
+            await prisma.user.create({
+                data: {
+                    email: adminEmail,
+                    passwordHash: hashedPassword,
+                    name: adminName,
+                    role: 'TENANT_ADMIN', 
+                    tenants: {
+                        create: {
+                            tenantId: tenant.id,
+                            role: 'TENANT_ADMIN',
+                        }
+                    }
+                },
+            });
 
-            return { tenant, channel };
-        } catch (error) {
-            // Rollback: delete tenant if Vendure fails
-            this.logger.error('❌ Vendure integration failed, rolling back tenant creation');
-            await this.prisma.tenant.delete({ where: { id: tenant.id } });
-            throw new InternalServerErrorException(
-                'Failed to create Vendure channel. Tenant creation rolled back.',
-            );
-        }
-    }
+            try {
+                const channel = await this.vendureService.createChannel(slug as string, rest.name);
+                return await prisma.tenant.update({
+                    where: { id: tenant.id },
+                    data: { vendureChannelToken: channel.token },
+                });
 
-    /**
-     * Get all tenants
-     */
-    async findAll(): Promise<Tenant[]> {
-        return this.prisma.tenant.findMany({
-            orderBy: { createdAt: 'desc' },
+            } catch (error) {
+                this.logger.error(`Failed to create Vendure channel for ${slug}`, error);
+                throw error; 
+            }
         });
+
+        this.logger.log(`✅ Tenant created successfully: ${result.name} (${result.slug})`);
+        return result;
     }
 
-    /**
-     * Get tenant by ID
-     */
-    async findById(id: string): Promise<Tenant> {
-        const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-        if (!tenant) {
-            throw new NotFoundException(`Tenant with ID "${id}" not found`);
-        }
-        return tenant;
+    async findAll() {
+        return this.prisma.tenant.findMany();
     }
 
-    /**
-     * Get tenant by slug
-     */
-    async findBySlug(slug: string): Promise<Tenant> {
+    async findById(id: string) {
+        return this.prisma.tenant.findUnique({ where: { id } });
+    }
+
+    async findBySlug(slug: string) {
         const tenant = await this.prisma.tenant.findUnique({ where: { slug } });
-        if (!tenant) {
-            throw new NotFoundException(`Tenant with slug "${slug}" not found`);
-        }
+        if (!tenant) throw new NotFoundException(`Tenant not found: ${slug}`);
         return tenant;
     }
 
-    /**
-     * Update tenant
-     */
-    async update(id: string, dto: UpdateTenantDto): Promise<Tenant> {
-        const tenant = await this.findById(id);
-
+    async update(id: string, updateTenantDto: UpdateTenantDto) {
         return this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: dto,
+            where: { id },
+            data: updateTenantDto,
         });
     }
 
-    /**
-     * Soft delete (suspend) tenant
-     */
-    async suspend(id: string): Promise<Tenant> {
-        const tenant = await this.findById(id);
-
+    async suspend(id: string) {
         return this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { status: TenantStatus.SUSPENDED },
+            where: { id },
+            data: { status: 'SUSPENDED' },
         });
     }
 
-    /**
-     * Reactivate tenant
-     */
-    async reactivate(id: string): Promise<Tenant> {
-        const tenant = await this.findById(id);
-
+    async reactivate(id: string) {
         return this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { status: TenantStatus.ACTIVE },
+            where: { id },
+            data: { status: 'ACTIVE' },
         });
     }
 
-    /**
-     * Hard delete tenant (use with caution!)
-     */
-    async delete(id: string): Promise<void> {
-        const tenant = await this.findById(id);
-
-        // Delete Vendure channel if exists
-        if (tenant.vendureChannelId) {
-            await this.vendureService.deleteChannel(tenant.vendureChannelId);
-        }
-
-        // Delete tenant from database
+    async delete(id: string) {
+        const tenant = await this.prisma.tenant.findUnique({ where: { id } });
+        if (!tenant) throw new NotFoundException('Tenant not found');
         await this.prisma.tenant.delete({ where: { id: tenant.id } });
-
         this.logger.log(`🗑️ Tenant deleted: ${tenant.slug}`);
     }
 
-    /**
-     * Generate URL-friendly slug from name
-     */
+    async seedProducts(slug: string): Promise<any> {
+        const tenant = await this.findBySlug(slug);
+        if (!tenant.vendureChannelToken) {
+            throw new NotFoundException('Tenant has no Vendure channel');
+        }
+
+        this.logger.log(`🌱 Seeding products for tenant: ${tenant.slug} (Token: ${tenant.vendureChannelToken})`);
+
+        const realProducts = [
+            { name: "iPhone 15 Pro Max", price: 5199, description: "Titanium design, A17 Pro chip." },
+            { name: "MacBook Air 15-inch", price: 6299, description: "Supercharged by M2." },
+            { name: "Sony WH-1000XM5", price: 1480, description: "Industry-leading noise canceling." },
+            { name: "Samsung Galaxy S24 Ultra", price: 5299, description: "Galaxy AI is here." },
+            { name: "PlayStation 5 Console", price: 2499, description: "Experience lightning fast loading." },
+            { name: "Nike Air Jordan 1", price: 800, description: "Iconic style, everyday comfort." },
+        ];
+
+        let seededCount = 0;
+
+        for (let i = 0; i < 15; i++) { 
+            const product = realProducts[i % realProducts.length];
+            const uniqueName = i >= realProducts.length ? `${product.name} ${i}` : product.name;
+            const uniqueSlug = this.generateSlug(uniqueName) + '-' + Math.floor(Math.random() * 100000);
+
+            // 1. Create Product
+            const createProductMutation = `
+                mutation CreateProduct($input: CreateProductInput!) {
+                    createProduct(input: $input) { id name variants { id } }
+                }
+            `;
+            
+            try {
+                const pData = await this.vendureService.executeGraphQL(createProductMutation, {
+                    input: {
+                        translations: [{ languageCode: 'en', name: uniqueName, slug: uniqueSlug, description: product.description }],
+                        enabled: true,
+                    }
+                }, tenant.vendureChannelToken);
+
+                if (!pData || !pData.createProduct) {
+                    this.logger.error(`❌ Create failed for ${uniqueName}`);
+                    continue;
+                }
+
+                const productId = pData.createProduct.id;
+                let variantId = pData.createProduct.variants?.[0]?.id;
+
+                // 2. If no variants, create one explicitly
+                if (!variantId) {
+                    this.logger.warn(`⚠️ No variants found for ${uniqueName}, creating manually...`);
+                    const createVariantMutation = `
+                        mutation CreateProductVariants($input: [CreateProductVariantInput!]!) {
+                            createProductVariants(input: $input) { id }
+                        }
+                    `;
+                    const vData = await this.vendureService.executeGraphQL(createVariantMutation, {
+                        input: [{
+                            productId: productId,
+                            sku: `SKU-${uniqueSlug}`,
+                            price: product.price * 100,
+                            translations: [{ languageCode: 'en', name: uniqueName }]
+                        }]
+                    }, tenant.vendureChannelToken);
+                    
+                    variantId = vData.createProductVariants?.[0]?.id;
+                } else {
+                     // 3. Update existing variant price
+                     const updateVariantMutation = `
+                        mutation UpdateVariant($input: [UpdateProductVariantInput!]!) {
+                            updateProductVariants(input: $input) { id }
+                        }
+                    `;
+                    await this.vendureService.executeGraphQL(updateVariantMutation, {
+                        input: [{
+                            id: variantId,
+                            price: product.price * 100,
+                            sku: `SKU-${uniqueSlug}`
+                        }]
+                    }, tenant.vendureChannelToken);
+                }
+
+                if (variantId) {
+                    this.logger.log(`✅ Seeded: ${uniqueName} (Variant ID: ${variantId})`);
+                    seededCount++;
+                } else {
+                    this.logger.error(`❌ Failed to get variant ID for ${uniqueName}`);
+                }
+                
+            } catch (e) {
+                this.logger.error(`❌ EXCEPTION seeding ${uniqueName}:`, e);
+            }
+        }
+
+        return { success: true, seeded: seededCount };
+    }
+
     private generateSlug(name: string): string {
         return name
             .toLowerCase()
             .trim()
-            .replace(/[^\w\s-]/g, '') // Remove special chars
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-'); // Remove consecutive hyphens
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
     }
 }

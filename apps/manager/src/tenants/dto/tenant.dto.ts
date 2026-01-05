@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength, MaxLength, IsOptional, IsEnum, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, MaxLength, IsOptional, IsEnum, Matches, IsEmail } from 'class-validator';
 import { BusinessType } from '@prisma/client';
 
 export class CreateTenantDto {
@@ -27,6 +27,20 @@ export class CreateTenantDto {
     @IsOptional()
     @IsEnum(BusinessType)
     type?: BusinessType;
+
+    // Admin User Details
+    @IsEmail()
+    @IsNotEmpty()
+    adminEmail: string;
+
+    @IsString()
+    @MinLength(6)
+    @IsNotEmpty()
+    adminPassword: string;
+
+    @IsString()
+    @IsNotEmpty()
+    adminName: string;
 }
 
 export class UpdateTenantDto {

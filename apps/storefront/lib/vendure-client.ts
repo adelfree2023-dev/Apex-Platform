@@ -1,48 +1,25 @@
-
 import { GraphQLClient } from 'graphql-request';
 
-const VENDURE_API_URL = process.env.NEXT_PUBLIC_VENDURE_URL || 'http://localhost:3001/shop-api';
+const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_URL || 'http://127.0.0.1:3000/shop-api';
 
-export const vendureClient = new GraphQLClient(VENDURE_API_URL, {
-    headers: {
-        'vendure-token': 'default', // Default Channel Token
-    },
-});
-
-export async function getProducts(take = 10, skip = 0) {
-    const query = `
-    query GetProducts($take: Int, $skip: Int) {
-      products(options: { take: $take, skip: $skip }) {
-        items {
-          id
-          name
-          slug
-          description
-          featuredAsset {
-            preview
-          }
-          variants {
-            price
-            currencyCode
-          }
-        }
-        totalItems
-      }
-    }
-  `;
-    try {
-        const data: any = await vendureClient.request(query, { take, skip });
-        return data.products;
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        return { items: [], totalItems: 0 };
-    }
+export interface Product {
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    featuredAsset?: {
+        preview: string;
+    };
+    variants: Array<{
+        price: number;
+        currencyCode: string;
+    }>;
 }
 
-export async function getProductBySlug(slug: string) {
-    const query = `
-    query GetProduct($slug: String!) {
-      product(slug: $slug) {
+const GET_PRODUCTS_QUERY = `
+  query GetProducts {
+    products(options: { take: 10 }) {
+      items {
         id
         name
         slug
@@ -50,52 +27,35 @@ export async function getProductBySlug(slug: string) {
         featuredAsset {
           preview
         }
-        assets {
-          preview
-        }
         variants {
-          id
           price
           currencyCode
-          sku
         }
       }
+      totalItems
     }
-  `;
-    try {
-        const data: any = await vendureClient.request(query, { slug });
-        return data.product;
-    } catch (error) {
-        console.error('Error fetching product:', error);
-        return null;
-    }
-}
+  }
+`;
 
-export async function searchProducts(term: string) {
-    const query = `
-    query Search($term: String!) {
-      search(input: { term: $term, groupByProduct: true }) {
-        items {
-          productId
-          productName
-          slug
-          price {
-            ... on PriceRange {
-              min
-            }
-          }
-          productAsset {
-            preview
-          }
-        }
-      }
+export async function getProducts(channelToken: string): Promise<Product[]> {
+    if (!channelToken) {
+        console.error("❌ No channel token provided!");
+        return [];
     }
-  `;
+
+    const client = new GraphQLClient(VENDURE_API, {
+        headers: {
+            'vendure-token': channelToken,
+        },
+    });
+
+    console.log(`🛒 Fetching products from Vendure (Token: ${channelToken.substring(0, 5)}...)`);
+
     try {
-        const data: any = await vendureClient.request(query, { term });
-        return data.search;
+        const data: any = await client.request(GET_PRODUCTS_QUERY);
+        return data.products.items;
     } catch (error) {
-        console.error('Search error:', error);
-        return { items: [] };
+        console.error("❌ Failed to fetch products:", error);
+        return [];
     }
 }

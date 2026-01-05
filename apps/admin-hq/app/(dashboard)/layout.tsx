@@ -1,34 +1,34 @@
-'use client';
+"use client";
 
-import { Sidebar } from '@/components/layout/sidebar';
-import { Header } from '@/components/layout/header';
-import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
-
+import { Sidebar } from "@/components/layout/sidebar";
+// Header might be missing, let's create a simple placeholder if needed, or assume it exists
+// For now, let's build the layout structure
 export default function DashboardLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    const { loading } = useAuth();
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Header />
-                <main className="flex-1 overflow-y-auto bg-muted/10 p-6">
-                    {children}
-                </main>
-            </div>
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Sidebar */}
+      <div className="hidden border-r bg-white md:block md:w-64">
+        <div className="flex h-16 items-center border-b px-6">
+          <span className="font-bold text-lg">Admin HQ</span>
         </div>
-    );
+        <div className="px-3">
+          <Sidebar />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        <header className="h-16 border-b bg-white px-6 flex items-center justify-between">
+            <h1 className="font-semibold">Dashboard</h1>
+        </header>
+        <main className="flex-1 p-6">
+            {children}
+        </main>
+      </div>
+    </div>
+  );
 }

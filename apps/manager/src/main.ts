@@ -9,39 +9,35 @@ async function bootstrap() {
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
 
-    // Enable CORS
+    // Enable CORS for all frontend ports including 3003 and Public IP
     app.enableCors({
-        origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3002'],
+        origin: [
+          'http://localhost:3000', 
+          'http://localhost:3001', 
+          'http://localhost:3002', 
+          'http://localhost:3003',
+          'http://34.18.154.179:3000',
+          'http://34.18.154.179:3001',
+          'http://34.18.154.179:3002',
+          'http://34.18.154.179:3003'
+        ],
         credentials: true,
     });
 
-    // Global validation pipe
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
             forbidNonWhitelisted: true,
             transform: true,
-            transformOptions: {
-                enableImplicitConversion: true,
-            },
+            transformOptions: { enableImplicitConversion: true },
         }),
     );
 
-    // Global prefix
     app.setGlobalPrefix('api');
 
     const port = process.env.PORT || 3000;
     await app.listen(port);
 
-    logger.log('');
-    logger.log('═══════════════════════════════════════════════');
-    logger.log('🎉 MANAGER API STARTED SUCCESSFULLY!');
-    logger.log('═══════════════════════════════════════════════');
-    logger.log(`📡 API:        http://localhost:${port}/api`);
-    logger.log(`💊 Health:     http://localhost:${port}/api/health`);
-    logger.log(`🏢 Tenants:    http://localhost:${port}/api/tenants`);
-    logger.log('═══════════════════════════════════════════════');
-    logger.log('');
+    logger.log('🎉 MANAGER API STARTED SUCCESSFULLY on port ' + port);
 }
-
 bootstrap();

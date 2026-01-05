@@ -1,38 +1,31 @@
-'use client';
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-
-export interface Tenant {
-    id: string;
-    name: string;
-    slug: string;
-    status: 'ACTIVE' | 'TRIAL' | 'SUSPENDED';
-    vendureChannelId: string | null;
-    createdAt: string;
-}
-
+import { useRouter } from 'next/navigation';
 export function useTenants() {
-    return useQuery({
-        queryKey: ['tenants'],
-        queryFn: async () => {
-            // In a real app this would call /api/tenants
-            const { data } = await apiClient.get<Tenant[]>('/api/tenants');
-            return data;
-        },
-    });
-}
-
-export function useCreateTenant() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async (dto: { name: string }) => {
-            const { data } = await apiClient.post('/api/tenants', dto);
-            return data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['tenants'] });
-        },
-    });
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const tenantsQuery = useQuery({
+    queryKey: ['tenants'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/tenants');
+      return data;
+    },
+  });
+  const createTenantMutation = useMutation({
+    mutationFn: async (data: any) => {
+      // إرسال البيانات (بما فيها الايميل والباسورد) للباك إند
+      const res = await apiClient.post('/tenants', data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      router.push('/tenants'); // العودة للقائمة بعد النجاح
+    },
+  });
+  return {
+    tenants: tenantsQuery.data,
+    isLoading: tenantsQuery.isLoading,
+    createTenant: createTenantMutation.mutateAsync,
+    isCreating: createTenantMutation.isPending,
+  };
 }

@@ -1,54 +1,47 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface User {
-    email: string;
-    name: string;
-    role: string;
+  id: string;
+  email: string;
+  name: string;
 }
 
 export function useAuth() {
-    const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-    useEffect(() => {
-        // Check if user is authenticated
-        const isAuth = localStorage.getItem('isAuthenticated');
-        const userData = localStorage.getItem('user');
+  useEffect(() => {
+    // Check for token on mount
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const userData = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        console.error("Failed to parse user data", e);
+      }
+    }
+    setLoading(false);
+  }, []);
 
-        if (isAuth === 'true' && userData) {
-            setUser(JSON.parse(userData));
-        } else {
-            // Not authenticated
-            setUser(null);
-        }
+  const login = (token: string, userData: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    router.push('/dashboard');
+  };
 
-        setLoading(false);
-    }, []);
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    router.push('/login');
+  };
 
-    const login = (email: string, name: string) => {
-        localStorage.setItem('isAuthenticated', 'true');
-        const userData = { email, name, role: 'SUPERADMIN' };
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        router.push('/dashboard');
-    };
-
-    const logout = () => {
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('user');
-        setUser(null);
-        router.push('/login');
-    };
-
-    return {
-        user,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-    };
+  return { user, loading, login, logout, isAuthenticated: !!user };
 }
