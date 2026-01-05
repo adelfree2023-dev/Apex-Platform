@@ -9,38 +9,56 @@ interface VendureChannel {
   defaultLanguageCode: string;
 }
 
-interface VendureAuthResponse {
-  login: {
-    id?: string;
-    identifier?: string;
-    errorCode?: string;
-    message?: string;
-  };
+interface VendureZone {
+  id: string;
+  name: string;
 }
 
 @Injectable()
 export class VendureService implements OnModuleInit {
   private client: GraphQLClient;
   private authToken: string | null = null;
+  private defaultZoneId: string | null = null;
   private readonly logger = new Logger(VendureService.name);
   private readonly vendureUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.vendureUrl = this.configService.get<string>('VENDURE_URL') || 'http://localhost:3001/admin-api';
+    this.vendureUrl =
+      this.configService.get<string>('VENDURE_URL') ||
+      'http://localhost:3001/admin-api';
     this.client = new GraphQLClient(this.vendureUrl);
   }
 
   async onModuleInit() {
     this.logger.log(`🔌 Connecting to Vendure at: ${this.vendureUrl}`);
+
+    // Wait for Vendure to be ready
+    let retries = 0;
+    while (retries < 10) {
+      try {
+        await this.authenticate();
+        await this.ensureDefaultZoneExists();
+        this.logger.log('✅ Vendure connection initialized successfully');
+        return;
+      } catch (error) {
+        retries++;
+        this.logger.warn(`Vendure not ready, retry ${retries}/10...`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+    this.logger.error('❌ Could not connect to Vendure after 10 retries');
   }
 
   /**
    * Authenticate with Vendure Admin API
-   * Returns the auth token for subsequent requests
    */
   async authenticate(): Promise<string> {
-    const username = this.configService.get<string>('VENDURE_SUPERADMIN_USERNAME') || 'superadmin';
-    const password = this.configService.get<string>('VENDURE_SUPERADMIN_PASSWORD') || 'superadmin';
+    const username =
+      this.configService.get<string>('VENDURE_SUPERADMIN_USERNAME') ||
+      'superadmin';
+    const password =
+      this.configService.get<string>('VENDURE_SUPERADMIN_PASSWORD') ||
+      'superadmin';
 
     const mutation = `
       mutation Login($username: String!, $password: String!) {
@@ -53,96 +71,112 @@ export class VendureService implements OnModuleInit {
             errorCode
             message
           }
-          ... on NativeAuthStrategyError {
-            errorCode
-            message
+        }
+      }
+    `;
+
+    const response = await this.client.rawRequest<{
+      login: { id?: string; identifier?: string; errorCode?: string };
+    }>(mutation, { username, password });
+
+    const authToken = response.headers.get('vendure-auth-token');
+    if (!authToken) {
+      throw new Error('No auth token received from Vendure');
+    }
+
+    this.authToken = authToken;
+    this.client.setHeader('Authorization', `Bearer ${authToken}`);
+    this.logger.log('✅ Authenticated with Vendure successfully');
+    return authToken;
+  }
+
+  /**
+   * CRITICAL: Ensure a default Zone exists for channel creation
+   * This is the ROOT FIX - zones are REQUIRED for channels
+   */
+  private async ensureDefaultZoneExists(): Promise<void> {
+    // First, check if zones exist
+    const zonesQuery = `
+      query {
+        zones {
+          items {
+            id
+            name
           }
         }
       }
     `;
 
     try {
-      const response = await this.client.rawRequest<VendureAuthResponse>(mutation, {
-        username,
-        password,
-      });
+      const zonesData = await this.client.request<{
+        zones: { items: VendureZone[] };
+      }>(zonesQuery);
 
-      // Extract auth token from response headers
-      const authToken = response.headers.get('vendure-auth-token');
-
-      if (!authToken) {
-        throw new Error('No auth token received from Vendure');
+      if (zonesData.zones.items.length > 0) {
+        // Use the first available zone
+        this.defaultZoneId = zonesData.zones.items[0].id;
+        this.logger.log(
+          `📍 Using existing zone: ${zonesData.zones.items[0].name} (ID: ${this.defaultZoneId})`,
+        );
+        return;
       }
 
-      this.authToken = authToken;
-      this.client.setHeader('Authorization', `Bearer ${authToken}`);
-
-      this.logger.log('✅ Authenticated with Vendure successfully');
-      return authToken;
+      // No zones exist - create one
+      this.logger.log('📍 No zones found, creating default zone...');
+      await this.createDefaultZone();
     } catch (error) {
-      this.logger.error('❌ Vendure authentication failed', error);
+      this.logger.error('Failed to check/create zones', error);
       throw error;
     }
   }
 
   /**
-   * Create a new Channel in Vendure for a tenant
+   * Create a default zone for the platform
    */
-  async createChannel(tenantSlug: string, tenantName: string): Promise<VendureChannel> {
-    // Ensure we're authenticated
-    if (!this.authToken) {
-      await this.authenticate();
-    }
-
-    // Get zones from the default channel (always exists)
-    const defaultChannelQuery = `
-      query {
-        channels {
-          items {
-            id
-            code
-            defaultShippingZone { id name }
-            defaultTaxZone { id name }
-          }
+  private async createDefaultZone(): Promise<void> {
+    const createZoneMutation = `
+      mutation CreateZone($input: CreateZoneInput!) {
+        createZone(input: $input) {
+          id
+          name
         }
       }
     `;
 
-    let defaultShippingZoneId: string | null = null;
-    let defaultTaxZoneId: string | null = null;
+    const zoneData = await this.client.request<{
+      createZone: VendureZone;
+    }>(createZoneMutation, {
+      input: {
+        name: 'Default Zone',
+      },
+    });
 
-    try {
-      const channelData = await this.client.request<{
-        channels: {
-          items: {
-            id: string;
-            code: string;
-            defaultShippingZone: { id: string; name: string } | null;
-            defaultTaxZone: { id: string; name: string } | null;
-          }[];
-        };
-      }>(defaultChannelQuery);
+    this.defaultZoneId = zoneData.createZone.id;
+    this.logger.log(
+      `✅ Created default zone: ${zoneData.createZone.name} (ID: ${this.defaultZoneId})`,
+    );
+  }
 
-      // Find the __default_channel__
-      const defaultChannel = channelData.channels.items.find(
-        (ch) => ch.code === '__default_channel__'
-      );
-
-      if (defaultChannel) {
-        if (defaultChannel.defaultShippingZone) {
-          defaultShippingZoneId = defaultChannel.defaultShippingZone.id;
-          this.logger.log(`Found shipping zone: ${defaultChannel.defaultShippingZone.name}`);
-        }
-        if (defaultChannel.defaultTaxZone) {
-          defaultTaxZoneId = defaultChannel.defaultTaxZone.id;
-          this.logger.log(`Found tax zone: ${defaultChannel.defaultTaxZone.name}`);
-        }
-      }
-    } catch (e) {
-      this.logger.warn('Could not fetch default channel zones');
+  /**
+   * Create a new Channel in Vendure for a tenant
+   */
+  async createChannel(
+    tenantSlug: string,
+    tenantName: string,
+  ): Promise<VendureChannel> {
+    // Ensure we're authenticated and have a zone
+    if (!this.authToken) {
+      await this.authenticate();
     }
 
-    // If no zones found, we need to create them or skip the zone fields
+    if (!this.defaultZoneId) {
+      await this.ensureDefaultZoneExists();
+    }
+
+    if (!this.defaultZoneId) {
+      throw new Error('No zone available for channel creation');
+    }
+
     const mutation = `
       mutation CreateChannel($input: CreateChannelInput!) {
         createChannel(input: $input) {
@@ -160,29 +194,32 @@ export class VendureService implements OnModuleInit {
       }
     `;
 
-    const input: Record<string, unknown> = {
-      code: tenantSlug,
-      token: tenantSlug,
-      defaultLanguageCode: 'en',
-      pricesIncludeTax: false,
-      defaultCurrencyCode: 'USD',
+    const variables = {
+      input: {
+        code: tenantSlug,
+        token: tenantSlug,
+        defaultLanguageCode: 'en',
+        pricesIncludeTax: false,
+        defaultCurrencyCode: 'USD',
+        defaultShippingZoneId: this.defaultZoneId,
+        defaultTaxZoneId: this.defaultZoneId,
+      },
     };
 
-    // Only add zone IDs if we found them
-    if (defaultShippingZoneId) {
-      input.defaultShippingZoneId = defaultShippingZoneId;
-    }
-    if (defaultTaxZoneId) {
-      input.defaultTaxZoneId = defaultTaxZoneId;
-    }
-
     try {
-      const data = await this.client.request<{ createChannel: VendureChannel }>(mutation, { input });
+      const data = await this.client.request<{
+        createChannel: VendureChannel;
+      }>(mutation, variables);
 
-      this.logger.log(`✅ Created Vendure Channel: ${data.createChannel.code} (ID: ${data.createChannel.id})`);
+      this.logger.log(
+        `✅ Created Vendure Channel: ${data.createChannel.code} (ID: ${data.createChannel.id})`,
+      );
       return data.createChannel;
     } catch (error) {
-      this.logger.error(`❌ Failed to create channel for tenant: ${tenantSlug}`, error);
+      this.logger.error(
+        `❌ Failed to create channel for tenant: ${tenantSlug}`,
+        error,
+      );
       throw error;
     }
   }
@@ -209,8 +246,14 @@ export class VendureService implements OnModuleInit {
     `;
 
     try {
-      const data = await this.client.request<{ channels: { items: VendureChannel[] } }>(query);
-      return data.channels.items.find((ch) => ch.code === code) || null;
+      const data = await this.client.request<{
+        channels: { items: VendureChannel[] };
+      }>(query);
+      return (
+        data.channels.items.find(
+          (ch: VendureChannel) => ch.code === code,
+        ) || null
+      );
     } catch (error) {
       this.logger.error(`❌ Failed to get channel: ${code}`, error);
       throw error;
