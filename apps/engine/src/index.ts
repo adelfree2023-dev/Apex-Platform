@@ -45,6 +45,7 @@ export const config: VendureConfig = {
         AdminUiPlugin.init({
             route: 'admin',
             port: 3002,
+            hostname: '0.0.0.0',
         }),
     ],
 };
