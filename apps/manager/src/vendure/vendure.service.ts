@@ -94,10 +94,10 @@ export class VendureService implements OnModuleInit {
       await this.authenticate();
     }
 
-    // First get the default seller ID
-    const sellerQuery = `
+    // First get the default zones (created automatically by Vendure)
+    const zonesQuery = `
             query {
-                sellers {
+                zones {
                     items {
                         id
                         name
@@ -106,14 +106,15 @@ export class VendureService implements OnModuleInit {
             }
         `;
 
-    let defaultSellerId = '1';
+    let defaultZoneId = '1';
     try {
-      const sellerData = await this.client.request<{ sellers: { items: { id: string; name: string }[] } }>(sellerQuery);
-      if (sellerData.sellers.items.length > 0) {
-        defaultSellerId = sellerData.sellers.items[0].id;
+      const zonesData = await this.client.request<{ zones: { items: { id: string; name: string }[] } }>(zonesQuery);
+      if (zonesData.zones.items.length > 0) {
+        defaultZoneId = zonesData.zones.items[0].id;
+        this.logger.log(`Found zone: ${zonesData.zones.items[0].name} (ID: ${defaultZoneId})`);
       }
     } catch (e) {
-      this.logger.warn('Could not fetch sellers, using default ID 1');
+      this.logger.warn('Could not fetch zones, using default ID 1');
     }
 
     const mutation = `
@@ -140,7 +141,8 @@ export class VendureService implements OnModuleInit {
         defaultLanguageCode: 'en',
         pricesIncludeTax: false,
         defaultCurrencyCode: 'USD',
-        defaultSellerId: defaultSellerId,
+        defaultShippingZoneId: defaultZoneId,
+        defaultTaxZoneId: defaultZoneId,
       },
     };
 
