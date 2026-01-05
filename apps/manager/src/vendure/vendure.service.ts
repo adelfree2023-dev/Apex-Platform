@@ -94,60 +94,90 @@ export class VendureService implements OnModuleInit {
       await this.authenticate();
     }
 
-    // First get the default zones (created automatically by Vendure)
-    const zonesQuery = `
-            query {
-                zones {
-                    items {
-                        id
-                        name
-                    }
-                }
-            }
-        `;
+    // Get zones from the default channel (always exists)
+    const defaultChannelQuery = `
+      query {
+        channels {
+          items {
+            id
+            code
+            defaultShippingZone { id name }
+            defaultTaxZone { id name }
+          }
+        }
+      }
+    `;
 
-    let defaultZoneId = '1';
+    let defaultShippingZoneId: string | null = null;
+    let defaultTaxZoneId: string | null = null;
+
     try {
-      const zonesData = await this.client.request<{ zones: { items: { id: string; name: string }[] } }>(zonesQuery);
-      if (zonesData.zones.items.length > 0) {
-        defaultZoneId = zonesData.zones.items[0].id;
-        this.logger.log(`Found zone: ${zonesData.zones.items[0].name} (ID: ${defaultZoneId})`);
+      const channelData = await this.client.request<{
+        channels: {
+          items: {
+            id: string;
+            code: string;
+            defaultShippingZone: { id: string; name: string } | null;
+            defaultTaxZone: { id: string; name: string } | null;
+          }[];
+        };
+      }>(defaultChannelQuery);
+
+      // Find the __default_channel__
+      const defaultChannel = channelData.channels.items.find(
+        (ch) => ch.code === '__default_channel__'
+      );
+
+      if (defaultChannel) {
+        if (defaultChannel.defaultShippingZone) {
+          defaultShippingZoneId = defaultChannel.defaultShippingZone.id;
+          this.logger.log(`Found shipping zone: ${defaultChannel.defaultShippingZone.name}`);
+        }
+        if (defaultChannel.defaultTaxZone) {
+          defaultTaxZoneId = defaultChannel.defaultTaxZone.id;
+          this.logger.log(`Found tax zone: ${defaultChannel.defaultTaxZone.name}`);
+        }
       }
     } catch (e) {
-      this.logger.warn('Could not fetch zones, using default ID 1');
+      this.logger.warn('Could not fetch default channel zones');
     }
 
+    // If no zones found, we need to create them or skip the zone fields
     const mutation = `
-            mutation CreateChannel($input: CreateChannelInput!) {
-                createChannel(input: $input) {
-                    ... on Channel {
-                        id
-                        code
-                        token
-                        defaultLanguageCode
-                    }
-                    ... on LanguageNotAvailableError {
-                        errorCode
-                        message
-                    }
-                }
-            }
-        `;
+      mutation CreateChannel($input: CreateChannelInput!) {
+        createChannel(input: $input) {
+          ... on Channel {
+            id
+            code
+            token
+            defaultLanguageCode
+          }
+          ... on LanguageNotAvailableError {
+            errorCode
+            message
+          }
+        }
+      }
+    `;
 
-    const variables = {
-      input: {
-        code: tenantSlug,
-        token: tenantSlug,
-        defaultLanguageCode: 'en',
-        pricesIncludeTax: false,
-        defaultCurrencyCode: 'USD',
-        defaultShippingZoneId: defaultZoneId,
-        defaultTaxZoneId: defaultZoneId,
-      },
+    const input: Record<string, unknown> = {
+      code: tenantSlug,
+      token: tenantSlug,
+      defaultLanguageCode: 'en',
+      pricesIncludeTax: false,
+      defaultCurrencyCode: 'USD',
     };
 
+    // Only add zone IDs if we found them
+    if (defaultShippingZoneId) {
+      input.defaultShippingZoneId = defaultShippingZoneId;
+    }
+    if (defaultTaxZoneId) {
+      input.defaultTaxZoneId = defaultTaxZoneId;
+    }
+
     try {
-      const data = await this.client.request<{ createChannel: VendureChannel }>(mutation, variables);
+      const data = await this.client.request<{ createChannel: VendureChannel }>(mutation, { input });
 
       this.logger.log(`✅ Created Vendure Channel: ${data.createChannel.code} (ID: ${data.createChannel.id})`);
       return data.createChannel;
