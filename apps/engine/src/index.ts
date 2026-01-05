@@ -34,6 +34,9 @@ export const config: VendureConfig = {
         username: process.env.DB_USER || 'postgres',
         password: process.env.DB_PASSWORD || 'postgres',
     },
+    paymentOptions: {
+        paymentMethodHandlers: [],
+    },
     plugins: [
         AssetServerPlugin.init({
             route: 'assets',
