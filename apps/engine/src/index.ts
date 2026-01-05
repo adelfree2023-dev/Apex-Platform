@@ -1,6 +1,7 @@
 import { bootstrap } from '@vendure/core';
 import { VendureConfig } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
+import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -37,12 +38,23 @@ export const config: VendureConfig = {
         paymentMethodHandlers: [],
     },
     plugins: [
+        AssetServerPlugin.init({
+            route: 'assets',
+            assetUploadDir: path.join(__dirname, '../static/assets'),
+        }),
         AdminUiPlugin.init({
             route: 'admin',
             port: 3002,
         }),
     ],
 };
+
+// Create assets directory
+import fs from 'fs';
+const assetsDir = path.join(__dirname, '../static/assets');
+if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+}
 
 // Bootstrap
 bootstrap(config)
