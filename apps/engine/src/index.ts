@@ -1,7 +1,6 @@
-import { bootstrap, runMigrations } from '@vendure/core';
+import { bootstrap } from '@vendure/core';
 import { VendureConfig } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
-import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -26,7 +25,7 @@ export const config: VendureConfig = {
     },
     dbConnectionOptions: {
         type: 'postgres',
-        synchronize: true,  // For initial setup
+        synchronize: true,
         logging: IS_DEV,
         database: process.env.DB_NAME || 'vendure',
         host: process.env.DB_HOST || 'localhost',
@@ -38,10 +37,6 @@ export const config: VendureConfig = {
         paymentMethodHandlers: [],
     },
     plugins: [
-        AssetServerPlugin.init({
-            route: 'assets',
-            assetUploadDir: path.join(__dirname, '../static/assets'),
-        }),
         AdminUiPlugin.init({
             route: 'admin',
             port: 3002,
@@ -61,7 +56,7 @@ bootstrap(config)
         console.log('🛍️  Shop API:  http://localhost:3001/shop-api');
         console.log('═══════════════════════════════════════════════');
     })
-    .catch((err) => {
+    .catch((err: Error) => {
         console.error('Failed to start Vendure:', err);
         process.exit(1);
     });
