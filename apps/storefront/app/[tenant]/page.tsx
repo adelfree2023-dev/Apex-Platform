@@ -5,13 +5,13 @@ import { getProducts } from "@/lib/vendure-client";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
-
+import { AddToCartBtn } from "@/components/products/add-to-cart-btn";
 export default async function StoreHomePage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
-  
+
   // 1. Get Tenant Details (for Token)
   const tenant = await getTenantBySlug(slug);
-  if (!tenant) return null; 
+  if (!tenant) return null;
 
   // 2. Fetch Real Products from Vendure
   const products = await getProducts(tenant.vendureChannelToken || '');
@@ -25,7 +25,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
           Welcome to <span className="text-primary">{tenant.name}</span>
         </h1>
         <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-          Discover our amazing collection of premium products. 
+          Discover our amazing collection of premium products.
           Quality meets affordability in one place.
         </p>
         <div className="flex justify-center gap-4">
@@ -37,22 +37,22 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
       {/* Product Grid */}
       <section>
         <h2 className="text-2xl font-bold mb-6">Featured Products</h2>
-        
+
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <Card key={product.id} className="overflow-hidden group">
                 <CardHeader className="p-0 aspect-square relative bg-gray-100">
-                   {product.featuredAsset ? (
-                     <Image 
-                       src={product.featuredAsset.preview} 
-                       alt={product.name} 
-                       fill 
-                       className="object-cover group-hover:scale-105 transition-transform duration-300"
-                     />
-                   ) : (
-                     <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
-                   )}
+                  {product.featuredAsset ? (
+                    <Image
+                      src={product.featuredAsset.preview}
+                      alt={product.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
+                  )}
                 </CardHeader>
                 <CardContent className="p-4">
                   <h3 className="font-bold text-lg leading-tight mb-2 truncate">{product.name}</h3>
@@ -60,12 +60,21 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
                 </CardContent>
                 <CardFooter className="p-4 pt-0 flex justify-between items-center">
                   <span className="font-bold text-primary">
-                    {product.variants[0]?.price 
-                      ? (product.variants[0].price / 100).toFixed(2) + ' ' + product.variants[0].currencyCode 
+                    {product.variants[0]?.price
+                      ? (product.variants[0].price / 100).toFixed(2) + ' ' + product.variants[0].currencyCode
                       : 'N/A'}
                   </span>
-                  <Button size="sm" variant="secondary">Add to Cart</Button>
-                </CardFooter>
+                  <AddToCartBtn
+                    product={{
+                      id: product.id,
+                      variantId: product.variants[0]?.id || product.id,
+                      name: product.name,
+                      price: product.variants[0]?.price || 0,
+                      currencyCode: product.variants[0]?.currencyCode || 'USD',
+                      slug: product.slug,
+                      image: product.featuredAsset?.preview
+                    }}
+                  />                </CardFooter>
               </Card>
             ))}
           </div>
@@ -75,7 +84,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
             <p className="text-xs text-gray-400">Go to Admin Dashboard to add products.</p>
           </div>
         )}
-        
+
       </section>
     </div>
   );
