@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/lib/cart-store';
 import { ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface AddToCartProps {
     product: {
@@ -19,7 +19,15 @@ interface AddToCartProps {
 
 export function AddToCartBtn({ product }: AddToCartProps) {
     const addItem = useCartStore((state) => state.addItem);
+    const items = useCartStore((state) => state.items);
     const [isAdded, setIsAdded] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const quantity = items.find((item) => item.id === product.variantId)?.quantity || 0;
 
     const handleAddToCart = () => {
         addItem({
@@ -46,6 +54,11 @@ export function AddToCartBtn({ product }: AddToCartProps) {
         >
             <ShoppingCart className="w-4 h-4 mr-2" />
             {isAdded ? "Added!" : "Add to Cart"}
+            {mounted && quantity > 0 && !isAdded && (
+                <span className="ml-2 bg-black/10 dark:bg-white/20 px-2 py-0.5 rounded-full text-xs font-medium">
+                    {quantity}
+                </span>
+            )}
         </Button>
     );
 }
