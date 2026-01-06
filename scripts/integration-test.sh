@@ -6,7 +6,7 @@
 # Run on the server: ~/apex/
 # ============================================
 
-set -e
+# Note: removed "set -e" as it causes issues with bash arithmetic
 
 echo "============================================"
 echo "🧪 APEX PLATFORM - INTEGRATION TEST"
