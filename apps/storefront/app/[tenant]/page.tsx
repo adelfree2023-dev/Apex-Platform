@@ -62,21 +62,27 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
                 </Link>
                 <CardFooter className="p-4 pt-0 flex justify-between items-center">
                   <span className="font-bold text-primary">
-                    {product.variants[0]?.price
-                      ? (product.variants[0].price / 100).toFixed(2) + ' ' + product.variants[0].currencyCode
-                      : 'N/A'}
+                    {(() => {
+                      const variant = product.variants[0];
+                      const price = variant?.priceWithTax || variant?.price || 0;
+                      if (price > 0) {
+                        return `${(price / 100).toFixed(2)} ${variant?.currencyCode || 'USD'}`;
+                      }
+                      return 'Price TBD';
+                    })()}
                   </span>
                   <AddToCartBtn
                     product={{
                       id: product.id,
                       variantId: product.variants[0]?.id || product.id,
                       name: product.name,
-                      price: product.variants[0]?.price || 0,
+                      price: product.variants[0]?.priceWithTax || product.variants[0]?.price || 0,
                       currencyCode: product.variants[0]?.currencyCode || 'USD',
                       slug: product.slug,
                       image: product.featuredAsset?.preview
                     }}
-                  />                </CardFooter>
+                  />
+                </CardFooter>
               </Card>
             ))}
           </div>

@@ -12,7 +12,9 @@ export interface Product {
   };
   variants: Array<{
     id: string;
+    sku?: string;
     price: number;
+    priceWithTax: number;
     currencyCode: string;
     name?: string;
   }>;
@@ -20,7 +22,7 @@ export interface Product {
 
 const GET_PRODUCTS_QUERY = `
   query GetProducts {
-    products(options: { take: 10 }) {
+    products(options: { take: 50 }) {
       items {
         id
         name
@@ -31,7 +33,9 @@ const GET_PRODUCTS_QUERY = `
         }
         variants {
           id
+          sku
           price
+          priceWithTax
           currencyCode
         }
       }
@@ -52,8 +56,10 @@ const GET_PRODUCT_BY_SLUG_QUERY = `
       }
       variants {
         id
+        sku
         name
         price
+        priceWithTax
         currencyCode
       }
     }
