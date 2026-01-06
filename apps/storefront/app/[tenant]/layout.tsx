@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getTenantBySlug } from "@/lib/manager-client";
 import { notFound } from "next/navigation";
+import { CartSheet } from "@/components/cart/cart-sheet";
 
 export default async function TenantLayout({
   children,
