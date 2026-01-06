@@ -52,14 +52,7 @@ export default async function TenantLayout({
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {/* Cart Link (with count) */}
-              <Button variant="ghost" size="icon" asChild className="relative">
-                <Link href={`/${tenant}/cart`}>
-                  <ShoppingCart className="h-5 w-5" />
-                </Link>
-              </Button>
-
-              {/* Cart Sheet (for quick view) */}
+              {/* Cart Sheet - shows dropdown with cart link inside */}
               <CartSheet tenantSlug={tenant} />
 
               {/* User Menu */}
