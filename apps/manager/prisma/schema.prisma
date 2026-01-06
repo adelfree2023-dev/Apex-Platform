@@ -103,14 +103,50 @@ model User {
   role         UserRole @default(CUSTOMER)
   isActive     Boolean  @default(true)
 
+  // Email Verification
+  emailVerified            Boolean   @default(false)
+  verificationToken        String?   @unique
+  verificationTokenExpiry  DateTime?
+
+  // Password Reset
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+
+  // Login tracking
+  lastLoginAt DateTime?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  tenants TenantUser[]
+  tenants  TenantUser[]
+  sessions Session[]
 
+  @@index([email])
+  @@index([role])
   @@map("users")
+}
+
+/// Session for JWT token management
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token        String   @unique
+  refreshToken String?  @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  // Metadata
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 /// Junction table for User-Tenant relationship
