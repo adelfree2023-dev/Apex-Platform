@@ -1,21 +1,41 @@
 const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || 'http://127.0.0.1:3001/shop-api';
 
+export interface ProductAsset {
+  id?: string;
+  preview: string;
+}
+
+export interface VariantOption {
+  code: string;
+  name: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  sku?: string;
+  name?: string;
+  price: number;
+  priceWithTax: number;
+  currencyCode: string;
+  stockLevel?: string;
+  options?: VariantOption[];
+}
+
+export interface OptionGroup {
+  code: string;
+  name: string;
+  options: VariantOption[];
+}
+
 export interface Product {
   id: string;
   name: string;
   slug: string;
   description: string;
-  featuredAsset?: {
-    preview: string;
-  };
-  variants: Array<{
-    id: string;
-    sku?: string;
-    price: number;
-    priceWithTax: number;
-    currencyCode: string;
-    name?: string;
-  }>;
+  featuredAsset?: ProductAsset;
+  assets?: ProductAsset[];
+  variants: ProductVariant[];
+  optionGroups?: OptionGroup[];
 }
 
 const GET_PRODUCTS_QUERY = `
@@ -50,6 +70,11 @@ const GET_PRODUCT_BY_SLUG_QUERY = `
       slug
       description
       featuredAsset {
+        id
+        preview
+      }
+      assets {
+        id
         preview
       }
       variants {
@@ -59,6 +84,19 @@ const GET_PRODUCT_BY_SLUG_QUERY = `
         price
         priceWithTax
         currencyCode
+        stockLevel
+        options {
+          code
+          name
+        }
+      }
+      optionGroups {
+        code
+        name
+        options {
+          code
+          name
+        }
       }
     }
   }
@@ -123,5 +161,77 @@ export async function getProductBySlug(channelToken: string, slug: string): Prom
   } catch (error) {
     console.error(`❌ Failed to fetch product ${slug}:`, error);
     return null;
+  }
+}
+
+// 🔍 Search products query
+const SEARCH_PRODUCTS_QUERY = `
+  query SearchProducts($term: String!, $take: Int) {
+    search(input: { term: $term, take: $take }) {
+      items {
+        productId
+        productName
+        slug
+        productAsset {
+          preview
+        }
+        price {
+          ... on SinglePrice {
+            value
+          }
+          ... on PriceRange {
+            min
+            max
+          }
+        }
+        currencyCode
+      }
+      totalItems
+    }
+  }
+`;
+
+export interface SearchResult {
+  productId: string;
+  productName: string;
+  slug: string;
+  productAsset?: {
+    preview: string;
+  };
+  price?: {
+    value?: number;
+    min?: number;
+    max?: number;
+  };
+  currencyCode?: string;
+}
+
+// 🔍 Search products
+export async function searchProducts(channelToken: string, term: string, take: number = 20): Promise<SearchResult[]> {
+  if (!channelToken || !term) return [];
+
+  try {
+    const response = await fetch(VENDURE_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'vendure-token': channelToken,
+      },
+      body: JSON.stringify({
+        query: SEARCH_PRODUCTS_QUERY,
+        variables: { term, take },
+      }),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data?.search?.items || [];
+  } catch (error) {
+    console.error(`❌ Failed to search products for "${term}":`, error);
+    return [];
   }
 }
