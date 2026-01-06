@@ -1,6 +1,4 @@
-import { GraphQLClient } from 'graphql-request';
-
-const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || 'http://127.0.0.1:3001/shop-api'; // Vendure API
+const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || 'http://127.0.0.1:3001/shop-api';
 
 export interface Product {
   id: string;
@@ -66,39 +64,62 @@ const GET_PRODUCT_BY_SLUG_QUERY = `
   }
 `;
 
+// 🔥 Using native fetch with NO CACHE to ensure fresh data from Vendure
 export async function getProducts(channelToken: string): Promise<Product[]> {
   if (!channelToken) {
     console.error("❌ No channel token provided!");
     return [];
   }
 
-  const client = new GraphQLClient(VENDURE_API, {
-    headers: {
-      'vendure-token': channelToken,
-    },
-  });
-
   console.log(`🛒 Fetching products from Vendure (Token: ${channelToken.substring(0, 5)}...)`);
 
   try {
-    const data: any = await client.request(GET_PRODUCTS_QUERY);
-    return data.products.items;
+    const response = await fetch(VENDURE_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'vendure-token': channelToken,
+      },
+      body: JSON.stringify({ query: GET_PRODUCTS_QUERY }),
+      cache: 'no-store', // 🔥 CRITICAL: Disable caching for real-time data
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data?.products?.items || [];
   } catch (error) {
     console.error("❌ Failed to fetch products:", error);
     return [];
   }
 }
 
+// 🔥 Using native fetch with NO CACHE for product details
 export async function getProductBySlug(channelToken: string, slug: string): Promise<Product | null> {
   if (!channelToken) return null;
 
-  const client = new GraphQLClient(VENDURE_API, {
-    headers: { 'vendure-token': channelToken },
-  });
-
   try {
-    const data: any = await client.request(GET_PRODUCT_BY_SLUG_QUERY, { slug });
-    return data.product;
+    const response = await fetch(VENDURE_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'vendure-token': channelToken,
+      },
+      body: JSON.stringify({
+        query: GET_PRODUCT_BY_SLUG_QUERY,
+        variables: { slug },
+      }),
+      cache: 'no-store', // 🔥 CRITICAL: No caching
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data?.product || null;
   } catch (error) {
     console.error(`❌ Failed to fetch product ${slug}:`, error);
     return null;

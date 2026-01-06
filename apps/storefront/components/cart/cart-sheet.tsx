@@ -14,15 +14,32 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/cart-store";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 
 interface CartSheetProps {
     tenantSlug: string; // 🔥 Required for tenant isolation
 }
 
 export function CartSheet({ tenantSlug }: CartSheetProps) {
+    const [mounted, setMounted] = useState(false);
+
     // 🔥 Use tenant-specific cart store
     const { items, removeItem, updateQuantity, getSummary } = useCartStore(tenantSlug);
     const { totalPrice, totalItems } = getSummary();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // 🔥 Prevent hydration mismatch - only render Sheet on client
+    if (!mounted) {
+        return (
+            <Button variant="ghost" size="icon" className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                <span className="sr-only">Cart</span>
+            </Button>
+        );
+    }
 
     return (
         <Sheet>
