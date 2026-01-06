@@ -63,7 +63,10 @@ export class TenantsService implements OnModuleInit {
                 const channel = await this.vendureService.createChannel(slug as string, rest.name);
                 return await prisma.tenant.update({
                     where: { id: tenant.id },
-                    data: { vendureChannelToken: channel.token },
+                    data: {
+                        vendureChannelId: channel.id,
+                        vendureChannelToken: channel.token
+                    },
                 });
 
             } catch (error) {
@@ -114,6 +117,18 @@ export class TenantsService implements OnModuleInit {
     async delete(id: string) {
         const tenant = await this.prisma.tenant.findUnique({ where: { id } });
         if (!tenant) throw new NotFoundException('Tenant not found');
+
+        // 🔥 FIX: Delete channel from Vendure first (sync deletion)
+        if (tenant.vendureChannelId) {
+            try {
+                await this.vendureService.deleteChannel(tenant.vendureChannelId);
+                this.logger.log(`🗑️ Vendure channel deleted: ${tenant.vendureChannelId}`);
+            } catch (error) {
+                this.logger.error(`Failed to delete Vendure channel: ${tenant.vendureChannelId}`, error);
+                // Continue with tenant deletion even if Vendure fails
+            }
+        }
+
         await this.prisma.tenant.delete({ where: { id: tenant.id } });
         this.logger.log(`🗑️ Tenant deleted: ${tenant.slug}`);
     }
