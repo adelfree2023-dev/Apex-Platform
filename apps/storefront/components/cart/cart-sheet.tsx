@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingCart, Trash2, X, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
@@ -12,31 +12,26 @@ import {
     SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/cart-store";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import Link from "next/link";
 
-export function CartSheet() {
-    const { items, removeItem, updateQuantity, getSummary } = useCartStore();
-    const [mounted, setMounted] = useState(false);
-    const { totalPrice } = getSummary();
+interface CartSheetProps {
+    tenantSlug: string; // 🔥 Required for tenant isolation
+}
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) return null;
+export function CartSheet({ tenantSlug }: CartSheetProps) {
+    // 🔥 Use tenant-specific cart store
+    const { items, removeItem, updateQuantity, getSummary } = useCartStore(tenantSlug);
+    const { totalPrice, totalItems } = getSummary();
 
     return (
         <Sheet>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <ShoppingCart className="h-5 w-5" />
-                    {items.length > 0 && (
+                    {totalItems > 0 && (
                         <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
-                            {items.length}
+                            {totalItems}
                         </span>
                     )}
                     <span className="sr-only">Cart</span>
@@ -81,7 +76,7 @@ export function CartSheet() {
                                                 {item.name}
                                             </h4>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                Variant: {item.slug} {/* Or name if available */}
+                                                Variant: {item.slug}
                                             </p>
                                         </div>
                                         <div className="flex items-center justify-between mt-2">
@@ -119,7 +114,7 @@ export function CartSheet() {
                                     </div>
                                     <div className="text-right">
                                         <p className="font-bold text-sm">
-                                            {((item.price * item.quantity) / 100).toFixed(2)} {item.currencyCode}
+                                            {((item.price * item.quantity) / 100).toFixed(2)} USD
                                         </p>
                                         <p className="text-xs text-gray-500">
                                             ({(item.price / 100).toFixed(2)} each)

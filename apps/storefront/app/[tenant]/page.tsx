@@ -72,6 +72,7 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
                     })()}
                   </span>
                   <AddToCartBtn
+                    tenantSlug={slug}
                     product={{
                       id: product.id,
                       variantId: product.variants[0]?.id || product.id,

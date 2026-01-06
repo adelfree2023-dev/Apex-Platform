@@ -14,22 +14,20 @@ interface AddToCartProps {
         currencyCode: string;
         slug: string;
         image?: string;
-    }
+    };
+    tenantSlug: string; // 🔥 Required for tenant isolation
 }
 
-export function AddToCartBtn({ product }: AddToCartProps) {
-    const { items, addItem, updateQuantity, removeItem } = useCartStore();
-    const [mounted, setMounted] = useState(false);
+export function AddToCartBtn({ product, tenantSlug }: AddToCartProps) {
+    // 🔥 Use tenant-specific cart store
+    const { items, addItem, updateQuantity, removeItem } = useCartStore(tenantSlug);
     const [inputValue, setInputValue] = useState("");
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
+    // Find item in cart
     const cartItem = items.find((item) => item.id === product.variantId);
     const quantity = cartItem?.quantity || 0;
 
-    // Sync input value with store quantity when not editing
+    // Sync input value with store quantity
     useEffect(() => {
         setInputValue(quantity.toString());
     }, [quantity]);
@@ -40,10 +38,9 @@ export function AddToCartBtn({ product }: AddToCartProps) {
             productId: product.id,
             name: product.name,
             price: product.price,
-            currencyCode: product.currencyCode || 'USD',
             quantity: 1,
             slug: product.slug,
-            image: product.image
+            image: product.image,
         });
     };
 
@@ -57,20 +54,15 @@ export function AddToCartBtn({ product }: AddToCartProps) {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        // Allow empty string for typing
         if (val === '') {
             setInputValue('');
             return;
         }
-        // Only allow numbers
         const num = parseInt(val);
         if (!isNaN(num)) {
             setInputValue(val);
             if (num > 0) {
                 updateQuantity(product.variantId, num);
-            } else {
-                // Don't remove immediately on 0 typing, wait for blur or decrement
-                // But if explicitly 0, maybe we should? Let's keep it safe.
             }
         }
     };
@@ -79,18 +71,14 @@ export function AddToCartBtn({ product }: AddToCartProps) {
         const num = parseInt(inputValue);
         if (isNaN(num) || num <= 0) {
             if (quantity > 0) {
-                setInputValue(quantity.toString()); // Revert
+                setInputValue(quantity.toString());
             } else {
-                setInputValue("1"); // Default
+                setInputValue("1");
             }
         } else {
             updateQuantity(product.variantId, num);
         }
     };
-
-    if (!mounted) {
-        return <Button size="sm" variant="secondary">Add to Cart</Button>;
-    }
 
     if (quantity > 0) {
         return (
@@ -126,7 +114,6 @@ export function AddToCartBtn({ product }: AddToCartProps) {
         <Button
             size="sm"
             onClick={handleIncrement}
-            className=""
             variant="default"
         >
             <ShoppingCart className="w-4 h-4 mr-2" />
