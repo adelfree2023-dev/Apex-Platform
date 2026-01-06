@@ -63,7 +63,7 @@ export class VendureService implements OnModuleInit {
     if (!authToken) throw new Error('No auth token received from Vendure');
     this.authToken = authToken;
     this.client.setHeader('Authorization', `Bearer ${authToken}`);
-    
+
     this.logger.log('✅ Authenticated with Vendure successfully');
     return authToken;
   }
@@ -72,21 +72,21 @@ export class VendureService implements OnModuleInit {
     // Query ALL channels to find the default one (usually 'default' or similar)
     const channelsQuery = `query { channels { items { id code token } } }`;
     try {
-        // Run WITHOUT channel header specifically to list global channels
-        this.client.setHeader('vendure-token', ''); 
-        const data = await this.client.request<{ channels: { items: VendureChannel[] } }>(channelsQuery);
-        
-        if (data.channels.items.length > 0) {
-             // Pick the first channel as "Default" context
-             this.defaultChannelToken = data.channels.items[0].token;
-             this.client.setHeader('vendure-token', this.defaultChannelToken);
-             this.logger.log(`✅ Discovered Default Channel Token: ${this.defaultChannelToken}`);
-        } else {
-             throw new Error('No channels found in Vendure!');
-        }
+      // Run WITHOUT channel header specifically to list global channels
+      this.client.setHeader('vendure-token', '');
+      const data = await this.client.request<{ channels: { items: VendureChannel[] } }>(channelsQuery);
+
+      if (data.channels.items.length > 0) {
+        // Pick the first channel as "Default" context
+        this.defaultChannelToken = data.channels.items[0].token;
+        this.client.setHeader('vendure-token', this.defaultChannelToken);
+        this.logger.log(`✅ Discovered Default Channel Token: ${this.defaultChannelToken}`);
+      } else {
+        throw new Error('No channels found in Vendure!');
+      }
     } catch (e) {
-        this.logger.error('Failed to fetch channels. Is the Admin API accessible?', e);
-        throw e;
+      this.logger.error('Failed to fetch channels. Is the Admin API accessible?', e);
+      throw e;
     }
   }
 
@@ -130,7 +130,7 @@ export class VendureService implements OnModuleInit {
     const variables = {
       input: {
         code: tenantSlug,
-        token: tenantSlug + '-token',
+        token: tenantSlug,
         defaultLanguageCode: 'en',
         pricesIncludeTax: false,
         defaultCurrencyCode: 'USD',
@@ -165,11 +165,11 @@ export class VendureService implements OnModuleInit {
     if (channelToken) {
       this.client.setHeader('vendure-token', channelToken);
     } else {
-        // Fallback to discovered default token
-        if (!this.defaultChannelToken) await this.fetchDefaultChannelToken();
-        this.client.setHeader('vendure-token', this.defaultChannelToken!);
+      // Fallback to discovered default token
+      if (!this.defaultChannelToken) await this.fetchDefaultChannelToken();
+      this.client.setHeader('vendure-token', this.defaultChannelToken!);
     }
-    
+
     if (!this.authToken) await this.authenticate();
 
     return this.client.request(query, variables);
