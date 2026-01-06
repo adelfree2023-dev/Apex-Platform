@@ -22,25 +22,27 @@ export default function TenantsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-           <p>Loading tenants...</p>
+          <p>Loading tenants...</p>
         ) : tenants?.map((tenant: any) => (
-          <Card key={tenant.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-bold">{tenant.name}</CardTitle>
-              <span className={`px-2 py-1 rounded text-xs ${tenant.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                {tenant.status}
-              </span>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500 mb-4">{tenant.slug}</p>
-              <div className="text-xs text-gray-400">
-                Created on {new Date(tenant.createdAt).toLocaleDateString()}
-              </div>
-            </CardContent>
-          </Card>
+          <Link key={tenant.id} href={`/tenants/${tenant.id}`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-bold">{tenant.name}</CardTitle>
+                <span className={`px-2 py-1 rounded text-xs ${tenant.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {tenant.status}
+                </span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 mb-4">{tenant.slug}</p>
+                <div className="text-xs text-gray-400">
+                  Created on {new Date(tenant.createdAt).toLocaleDateString()}
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
         {!isLoading && tenants?.length === 0 && (
-            <p className="text-gray-500 col-span-3 text-center py-10">No tenants found. Create your first one!</p>
+          <p className="text-gray-500 col-span-3 text-center py-10">No tenants found. Create your first one!</p>
         )}
       </div>
     </div>
