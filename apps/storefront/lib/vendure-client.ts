@@ -11,8 +11,10 @@ export interface Product {
     preview: string;
   };
   variants: Array<{
+    id: string;
     price: number;
     currencyCode: string;
+    name?: string;
   }>;
 }
 
@@ -28,11 +30,32 @@ const GET_PRODUCTS_QUERY = `
           preview
         }
         variants {
+          id
           price
           currencyCode
         }
       }
       totalItems
+    }
+  }
+`;
+
+const GET_PRODUCT_BY_SLUG_QUERY = `
+  query GetProductBySlug($slug: String!) {
+    product(slug: $slug) {
+      id
+      name
+      slug
+      description
+      featuredAsset {
+        preview
+      }
+      variants {
+        id
+        name
+        price
+        currencyCode
+      }
     }
   }
 `;
@@ -57,5 +80,21 @@ export async function getProducts(channelToken: string): Promise<Product[]> {
   } catch (error) {
     console.error("❌ Failed to fetch products:", error);
     return [];
+  }
+}
+
+export async function getProductBySlug(channelToken: string, slug: string): Promise<Product | null> {
+  if (!channelToken) return null;
+
+  const client = new GraphQLClient(VENDURE_API, {
+    headers: { 'vendure-token': channelToken },
+  });
+
+  try {
+    const data: any = await client.request(GET_PRODUCT_BY_SLUG_QUERY, { slug });
+    return data.product;
+  } catch (error) {
+    console.error(`❌ Failed to fetch product ${slug}:`, error);
+    return null;
   }
 }

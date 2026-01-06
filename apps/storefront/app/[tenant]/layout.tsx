@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ShoppingCart, Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getTenantBySlug } from "@/lib/manager-client"; 
-import { notFound } from "next/navigation"; 
+import { getTenantBySlug } from "@/lib/manager-client";
+import { notFound } from "next/navigation";
 
 export default async function TenantLayout({
   children,
@@ -20,7 +20,7 @@ export default async function TenantLayout({
 
   // إذا لم يكن موجوداً -> صفحة 404
   if (!tenantData) {
-    notFound(); 
+    notFound();
   }
 
   return (
@@ -38,10 +38,7 @@ export default async function TenantLayout({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <ShoppingCart className="h-5 w-5" />
-                <span className="sr-only">Cart</span>
-              </Button>
+              <CartSheet />
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
               </Button>

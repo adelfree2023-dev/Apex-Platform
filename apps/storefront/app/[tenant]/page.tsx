@@ -42,22 +42,24 @@ export default async function StoreHomePage({ params }: { params: Promise<{ tena
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <Card key={product.id} className="overflow-hidden group">
-                <CardHeader className="p-0 aspect-square relative bg-gray-100">
-                  {product.featuredAsset ? (
-                    <Image
-                      src={product.featuredAsset.preview}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
-                  )}
-                </CardHeader>
-                <CardContent className="p-4">
-                  <h3 className="font-bold text-lg leading-tight mb-2 truncate">{product.name}</h3>
-                  <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
-                </CardContent>
+                <Link href={`/${slug}/products/${product.slug}`} className="block">
+                  <CardHeader className="p-0 aspect-square relative bg-gray-100">
+                    {product.featuredAsset ? (
+                      <Image
+                        src={product.featuredAsset.preview}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-lg leading-tight mb-2 truncate group-hover:text-primary transition-colors">{product.name}</h3>
+                    <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                  </CardContent>
+                </Link>
                 <CardFooter className="p-4 pt-0 flex justify-between items-center">
                   <span className="font-bold text-primary">
                     {product.variants[0]?.price

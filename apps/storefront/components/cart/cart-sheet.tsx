@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Trash2, X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
@@ -9,109 +9,144 @@ import {
     SheetTitle,
     SheetTrigger,
     SheetFooter,
+    SheetClose,
 } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/cart-store";
-import { useTenant } from "@/lib/tenant-context";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export function CartSheet() {
     const { items, removeItem, updateQuantity, getSummary } = useCartStore();
-    const { totalItems, totalPrice } = getSummary();
-    const { slug } = useTenant();
+    const [mounted, setMounted] = useState(false);
+    const { totalPrice } = getSummary();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
 
     return (
         <Sheet>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <ShoppingCart className="h-5 w-5" />
-                    {totalItems > 0 && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                            {totalItems}
+                    {items.length > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
+                            {items.length}
                         </span>
                     )}
                     <span className="sr-only">Cart</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="flex flex-col w-full sm:max-w-md">
                 <SheetHeader>
-                    <SheetTitle>Shopping Cart ({totalItems})</SheetTitle>
+                    <SheetTitle>Your Shopping Cart ({items.length})</SheetTitle>
                 </SheetHeader>
 
-                <div className="mt-8 flex-1 overflow-y-auto">
+                <ScrollArea className="flex-1 -mx-6 px-6 my-4">
                     {items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
-                            <ShoppingCart className="h-12 w-12 mb-4 opacity-50" />
-                            <p>Your cart is empty</p>
+                        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
+                            <ShoppingCart className="h-16 w-16 text-gray-200" />
+                            <div className="text-xl font-medium text-gray-900">Your cart is empty</div>
+                            <p className="text-sm text-gray-500">Looks like you haven't added anything yet.</p>
+                            <SheetClose asChild>
+                                <Button variant="link" className="text-primary">
+                                    Continue Shopping
+                                </Button>
+                            </SheetClose>
                         </div>
                     ) : (
                         <div className="space-y-6">
                             {items.map((item) => (
                                 <div key={item.id} className="flex gap-4">
-                                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border bg-gray-100">
+                                    <div className="relative h-20 w-20 rounded-md overflow-hidden bg-gray-100 border flex-shrink-0">
                                         {item.image ? (
-                                            <img
+                                            <Image
                                                 src={item.image}
                                                 alt={item.name}
-                                                className="h-full w-full object-cover object-center"
+                                                fill
+                                                className="object-cover"
                                             />
                                         ) : (
-                                            <div className="h-full w-full flex items-center justify-center text-xs text-gray-400">
-                                                No Img
-                                            </div>
+                                            <div className="flex items-center justify-center h-full text-xs text-gray-400">No Img</div>
                                         )}
                                     </div>
-
-                                    <div className="flex flex-1 flex-col">
+                                    <div className="flex-1 flex flex-col justify-between">
                                         <div>
-                                            <div className="flex justify-between text-base font-medium">
-                                                <h3 className="line-clamp-2 text-sm">
-                                                    {item.name}
-                                                </h3>
-                                                <p className="ml-4 tabular-nums text-sm">
-                                                    {(item.price / 100).toLocaleString()}
-                                                </p>
-                                            </div>
+                                            <h4 className="font-medium text-sm line-clamp-2 leading-tight">
+                                                {item.name}
+                                            </h4>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Variant: {item.slug} {/* Or name if available */}
+                                            </p>
                                         </div>
-                                        <div className="flex flex-1 items-end justify-between text-sm">
-                                            <div className="flex items-center gap-2 border rounded-md px-1">
-                                                <button
-                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    className="p-1 hover:bg-gray-100 rounded"
+                                        <div className="flex items-center justify-between mt-2">
+                                            <div className="flex items-center gap-2 border rounded-md p-0.5">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    onClick={() => {
+                                                        if (item.quantity === 1) removeItem(item.id);
+                                                        else updateQuantity(item.id, item.quantity - 1);
+                                                    }}
                                                 >
                                                     <Minus className="h-3 w-3" />
-                                                </button>
-                                                <span className="w-4 text-center">{item.quantity}</span>
-                                                <button
+                                                </Button>
+                                                <span className="text-xs w-4 text-center font-medium">{item.quantity}</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
                                                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                    className="p-1 hover:bg-gray-100 rounded"
                                                 >
                                                     <Plus className="h-3 w-3" />
-                                                </button>
+                                                </Button>
                                             </div>
-
-                                            <button
-                                                type="button"
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                 onClick={() => removeItem(item.id)}
-                                                className="font-medium text-destructive hover:text-destructive/80"
                                             >
                                                 <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            </Button>
                                         </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-sm">
+                                            {((item.price * item.quantity) / 100).toFixed(2)} {item.currencyCode}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            ({(item.price / 100).toFixed(2)} each)
+                                        </p>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
-                </div>
+                </ScrollArea>
 
                 {items.length > 0 && (
-                    <div className="border-t pt-4 mt-4 space-y-4">
-                        <div className="flex justify-between text-base font-medium">
-                            <p>Subtotal</p>
-                            <p>{(totalPrice / 100).toLocaleString()}</p>
+                    <div className="space-y-4 pt-4 border-t">
+                        <div className="flex items-center justify-between font-bold text-lg">
+                            <span>Total</span>
+                            <span>{(totalPrice / 100).toFixed(2)} USD</span>
                         </div>
-                        <Button className="w-full" size="lg">
-                            Checkout
-                        </Button>
+                        <SheetFooter className="flex-col gap-3 sm:flex-col sm:space-x-0">
+                            <Button className="w-full h-12 text-base shadow-xl bg-gradient-to-r from-primary to-primary/80">
+                                Checkout Now
+                            </Button>
+                            <SheetClose asChild>
+                                <Button variant="outline" className="w-full">
+                                    Continue Shopping
+                                </Button>
+                            </SheetClose>
+                        </SheetFooter>
                     </div>
                 )}
             </SheetContent>
