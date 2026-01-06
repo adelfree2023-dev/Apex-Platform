@@ -49,7 +49,7 @@ export class TenantsService implements OnModuleInit {
                     email: adminEmail,
                     passwordHash: hashedPassword,
                     name: adminName,
-                    role: 'TENANT_ADMIN', 
+                    role: 'TENANT_ADMIN',
                     tenants: {
                         create: {
                             tenantId: tenant.id,
@@ -68,7 +68,7 @@ export class TenantsService implements OnModuleInit {
 
             } catch (error) {
                 this.logger.error(`Failed to create Vendure channel for ${slug}`, error);
-                throw error; 
+                throw error;
             }
         });
 
@@ -137,7 +137,7 @@ export class TenantsService implements OnModuleInit {
 
         let seededCount = 0;
 
-        for (let i = 0; i < 15; i++) { 
+        for (let i = 0; i < 15; i++) {
             const product = realProducts[i % realProducts.length];
             const uniqueName = i >= realProducts.length ? `${product.name} ${i}` : product.name;
             const uniqueSlug = this.generateSlug(uniqueName) + '-' + Math.floor(Math.random() * 100000);
@@ -148,7 +148,7 @@ export class TenantsService implements OnModuleInit {
                     createProduct(input: $input) { id name variants { id } }
                 }
             `;
-            
+
             try {
                 const pData = await this.vendureService.executeGraphQL(createProductMutation, {
                     input: {
@@ -170,7 +170,11 @@ export class TenantsService implements OnModuleInit {
                     this.logger.warn(`⚠️ No variants found for ${uniqueName}, creating manually...`);
                     const createVariantMutation = `
                         mutation CreateProductVariants($input: [CreateProductVariantInput!]!) {
-                            createProductVariants(input: $input) { id }
+                            createProductVariants(input: $input) { 
+                                id 
+                                price
+                                priceWithTax
+                            }
                         }
                     `;
                     const vData = await this.vendureService.executeGraphQL(createVariantMutation, {
@@ -178,14 +182,17 @@ export class TenantsService implements OnModuleInit {
                             productId: productId,
                             sku: `SKU-${uniqueSlug}`,
                             price: product.price * 100,
+                            stockOnHand: 100,
                             translations: [{ languageCode: 'en', name: uniqueName }]
                         }]
                     }, tenant.vendureChannelToken);
-                    
+
                     variantId = vData.createProductVariants?.[0]?.id;
+                    const createdPrice = vData.createProductVariants?.[0]?.price;
+                    this.logger.log(`💰 Created variant with price: ${createdPrice}`);
                 } else {
-                     // 3. Update existing variant price
-                     const updateVariantMutation = `
+                    // 3. Update existing variant price
+                    const updateVariantMutation = `
                         mutation UpdateVariant($input: [UpdateProductVariantInput!]!) {
                             updateProductVariants(input: $input) { id }
                         }
@@ -205,7 +212,7 @@ export class TenantsService implements OnModuleInit {
                 } else {
                     this.logger.error(`❌ Failed to get variant ID for ${uniqueName}`);
                 }
-                
+
             } catch (e) {
                 this.logger.error(`❌ EXCEPTION seeding ${uniqueName}:`, e);
             }
