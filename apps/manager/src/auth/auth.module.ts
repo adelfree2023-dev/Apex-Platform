@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PasswordService } from './services/password.service';
 import { JwtAuthService } from './services/jwt.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -26,9 +27,11 @@ import { PrismaService } from '../prisma/prisma.service';
         AuthService,
         PasswordService,
         JwtAuthService,
+        JwtStrategy,  // <-- This registers the jwt strategy!
         EmailService,
         PrismaService,
     ],
     exports: [AuthService, PasswordService, JwtAuthService],
 })
 export class AuthModule { }
+
