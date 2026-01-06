@@ -1,0 +1,43 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 30
+      arrivalRate: 2
+      name: 'Warm up'
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 10
+      name: 'Ramp up load'
+    - duration: 60
+      arrivalRate: 10
+      name: 'Sustained load'
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+scenarios:
+  - name: 'Tenant Management Flow'
+    flow:
+      # 1. List existing tenants (Light operation)
+      - get:
+          url: '/api/tenants'
+      
+      - think: 1
+
+      # 2. Create a new tenant (Heavy operation)
+      - post:
+          url: '/api/tenants'
+          json:
+            name: 'Load Test {{ $randomString() }}'
+            adminEmail: 'load_admin_{{ $randomString() }}@test.com'
+            adminPassword: 'Password123!'
+            adminName: 'Load Admin'
+          capture:
+            - json: '$.id'
+              as: 'tenantId'
+      
+      - think: 2
+
+      # 3. View the created tenant details
+      - get:
+          url: '/api/tenants/{{ tenantId }}'
