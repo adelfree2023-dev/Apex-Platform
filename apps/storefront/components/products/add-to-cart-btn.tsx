@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/lib/cart-store';
 import { ShoppingCart } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AddToCartProps {
     product: {
@@ -18,20 +18,25 @@ interface AddToCartProps {
 }
 
 export function AddToCartBtn({ product }: AddToCartProps) {
-    const addItem = useCartStore((state) => state.addItem);
-    const items = useCartStore((state) => state.items);
-    const [isAdded, setIsAdded] = useState(false);
+    const { items, addItem, updateQuantity, removeItem } = useCartStore();
     const [mounted, setMounted] = useState(false);
+    const [inputValue, setInputValue] = useState("");
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const quantity = items.find((item) => item.id === product.variantId)?.quantity || 0;
+    const cartItem = items.find((item) => item.id === product.variantId);
+    const quantity = cartItem?.quantity || 0;
 
-    const handleAddToCart = () => {
+    // Sync input value with store quantity when not editing
+    useEffect(() => {
+        setInputValue(quantity.toString());
+    }, [quantity]);
+
+    const handleIncrement = () => {
         addItem({
-            id: product.variantId, // Cart uses Variant ID
+            id: product.variantId,
             productId: product.id,
             name: product.name,
             price: product.price,
@@ -40,25 +45,92 @@ export function AddToCartBtn({ product }: AddToCartProps) {
             slug: product.slug,
             image: product.image
         });
-
-        setIsAdded(true);
-        setTimeout(() => setIsAdded(false), 2000); // Reset state after 2s
     };
+
+    const handleDecrement = () => {
+        if (quantity > 1) {
+            updateQuantity(product.variantId, quantity - 1);
+        } else {
+            removeItem(product.variantId);
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        // Allow empty string for typing
+        if (val === '') {
+            setInputValue('');
+            return;
+        }
+        // Only allow numbers
+        const num = parseInt(val);
+        if (!isNaN(num)) {
+            setInputValue(val);
+            if (num > 0) {
+                updateQuantity(product.variantId, num);
+            } else {
+                // Don't remove immediately on 0 typing, wait for blur or decrement
+                // But if explicitly 0, maybe we should? Let's keep it safe.
+            }
+        }
+    };
+
+    const handleInputBlur = () => {
+        const num = parseInt(inputValue);
+        if (isNaN(num) || num <= 0) {
+            if (quantity > 0) {
+                setInputValue(quantity.toString()); // Revert
+            } else {
+                setInputValue("1"); // Default
+            }
+        } else {
+            updateQuantity(product.variantId, num);
+        }
+    };
+
+    if (!mounted) {
+        return <Button size="sm" variant="secondary">Add to Cart</Button>;
+    }
+
+    if (quantity > 0) {
+        return (
+            <div className="flex items-center gap-1 bg-secondary rounded-md p-0.5">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-sm hover:bg-white"
+                    onClick={handleDecrement}
+                >
+                    -
+                </Button>
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onBlur={handleInputBlur}
+                    className="w-10 text-center bg-transparent border-none text-sm font-medium focus:outline-none focus:ring-0"
+                />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-sm hover:bg-white"
+                    onClick={handleIncrement}
+                >
+                    +
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <Button
             size="sm"
-            onClick={handleAddToCart}
-            className={isAdded ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-            variant={isAdded ? "default" : "secondary"}
+            onClick={handleIncrement}
+            className=""
+            variant="default"
         >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            {isAdded ? "Added!" : "Add to Cart"}
-            {mounted && quantity > 0 && !isAdded && (
-                <span className="ml-2 bg-black/10 dark:bg-white/20 px-2 py-0.5 rounded-full text-xs font-medium">
-                    {quantity}
-                </span>
-            )}
+            Add to Cart
         </Button>
     );
 }
