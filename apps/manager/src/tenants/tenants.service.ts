@@ -1,9 +1,9 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto/tenant.dto';
 import { VendureService } from '../vendure/vendure.service';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 @Injectable()
 export class TenantsService implements OnModuleInit {
@@ -26,57 +26,68 @@ export class TenantsService implements OnModuleInit {
 
         const { adminEmail, adminPassword, adminName, ...rest } = createTenantDto;
 
+        // Check availability (Optimization, not atomic protection)
         const existingTenant = await this.prisma.tenant.findUnique({ where: { slug } });
         if (existingTenant) {
-            throw new Error(`Tenant with slug "${slug}" already exists`);
+            throw new ConflictException(`Tenant with slug "${slug}" already exists`);
         }
 
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-        const result = await this.prisma.$transaction(async (prisma) => {
-            const tenant = await prisma.tenant.create({
-                data: {
-                    name: rest.name,
-                    slug: slug as string,
-                    domain: rest.domain,
-                    type: rest.type,
-                    status: 'ACTIVE',
-                },
-            });
-
-            await prisma.user.create({
-                data: {
-                    email: adminEmail,
-                    passwordHash: hashedPassword,
-                    name: adminName,
-                    role: 'TENANT_ADMIN',
-                    tenants: {
-                        create: {
-                            tenantId: tenant.id,
-                            role: 'TENANT_ADMIN',
-                        }
-                    }
-                },
-            });
-
-            try {
-                const channel = await this.vendureService.createChannel(slug as string, rest.name);
-                return await prisma.tenant.update({
-                    where: { id: tenant.id },
+        try {
+            const result = await this.prisma.$transaction(async (prisma) => {
+                const tenant = await prisma.tenant.create({
                     data: {
-                        vendureChannelId: channel.id,
-                        vendureChannelToken: channel.token
+                        name: rest.name,
+                        slug: slug as string,
+                        domain: rest.domain,
+                        type: rest.type,
+                        status: 'ACTIVE',
                     },
                 });
 
-            } catch (error) {
-                this.logger.error(`Failed to create Vendure channel for ${slug}`, error);
-                throw error;
-            }
-        });
+                await prisma.user.create({
+                    data: {
+                        email: adminEmail,
+                        passwordHash: hashedPassword,
+                        name: adminName,
+                        role: 'TENANT_ADMIN', // Ensure this maps to your actual Enum
+                        tenants: {
+                            create: {
+                                tenantId: tenant.id,
+                                role: 'TENANT_ADMIN',
+                            }
+                        }
+                    },
+                });
 
-        this.logger.log(`✅ Tenant created successfully: ${result.name} (${result.slug})`);
-        return result;
+                try {
+                    const channel = await this.vendureService.createChannel(slug as string, rest.name);
+                    return await prisma.tenant.update({
+                        where: { id: tenant.id },
+                        data: {
+                            vendureChannelId: channel.id,
+                            vendureChannelToken: channel.token
+                        },
+                    });
+
+                } catch (error) {
+                    this.logger.error(`Failed to create Vendure channel for ${slug}`, error);
+                    // This will trigger transaction rollback
+                    throw new BadRequestException('Failed to setup commerce engine');
+                }
+            });
+
+            this.logger.log(`✅ Tenant created successfully: ${result.name} (${result.slug})`);
+            return result;
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === 'P2002') {
+                    throw new ConflictException('Tenant with this name or slug already exists');
+                }
+            }
+            throw error;
+        }
     }
 
     async findAll() {
