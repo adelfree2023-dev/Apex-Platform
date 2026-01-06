@@ -1,4 +1,4 @@
-const MANAGER_API = process.env.MANAGER_API_URL || 'http://127.0.0.1:3005/api'; // Manager API (Server-Side)
+const MANAGER_API = process.env.MANAGER_API_URL || 'http://127.0.0.1:3000/api'; // Manager API (Server-Side)
 
 export interface Tenant {
   id: string;
