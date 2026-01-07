@@ -6,12 +6,12 @@ import Image from "next/image";
 import type { ShippingData, PaymentData } from "./checkout-content";
 
 interface CartItem {
-    variantId: string;
+    id: string;
     productId: string;
     name: string;
     slug: string;
     price: number;
-    currencyCode: string;
+    currencyCode?: string;
     quantity: number;
     image?: string;
 }
