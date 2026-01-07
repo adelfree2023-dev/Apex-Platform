@@ -10,15 +10,16 @@
  * 3. This prevents cross-store login
  */
 
-import { EventBus, CustomerEvent, TransactionalConnection, Injector } from '@vendure/core';
+import { EventBus, CustomerEvent, TransactionalConnection } from '@vendure/core';
+import { INestApplication } from '@nestjs/common';
 
 /**
  * Initialize the SingleChannelCustomer event listeners
  * Call this from bootstrap() after Vendure starts
  */
-export async function initializeSingleChannelCustomerListeners(injector: Injector): Promise<void> {
-    const eventBus = injector.get(EventBus);
-    const connection = injector.get(TransactionalConnection);
+export async function initializeSingleChannelCustomerListeners(app: INestApplication): Promise<void> {
+    const eventBus = app.get(EventBus);
+    const connection = app.get(TransactionalConnection);
 
     console.log('[SingleChannelCustomerPlugin] 🔒 Initializing customer channel isolation...');
 
