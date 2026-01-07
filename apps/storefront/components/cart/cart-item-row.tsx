@@ -12,7 +12,7 @@ interface CartItem {
     name: string;
     slug: string;
     price: number;
-    currencyCode: string;
+    currencyCode?: string;
     quantity: number;
     image?: string;
 }

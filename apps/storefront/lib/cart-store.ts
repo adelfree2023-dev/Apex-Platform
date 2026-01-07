@@ -12,6 +12,7 @@ export interface CartItem {
     quantity: number;
     slug: string;
     image?: string;
+    currencyCode?: string;
 }
 
 interface CartState {
