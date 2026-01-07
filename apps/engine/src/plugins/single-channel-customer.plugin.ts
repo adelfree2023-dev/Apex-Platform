@@ -29,8 +29,17 @@ export async function initializeSingleChannelCustomerListeners(app: INestApplica
     // Listen for ACCOUNT REGISTRATION events (from Shop API)
     eventBus.ofType(AccountRegistrationEvent).subscribe(async (event) => {
         const ctx = event.ctx;
-        const customer = event.customer;
+        // Use (event as any).customer because TypeScript definitions may be outdated
+        // but the property exists at runtime (same approach as manager-email-plugin)
+        const customer = (event as any).customer;
         const registrationChannelId = ctx.channelId;
+
+        if (!customer) {
+            console.log(`[SingleChannelCustomerPlugin] ⚠️ No customer object in event, trying user.identifier`);
+            // Fallback: try to get customer ID from other sources
+            console.log(`[SingleChannelCustomerPlugin] Event user:`, event.user?.identifier);
+            return;
+        }
 
         console.log(`[SingleChannelCustomerPlugin] 🆕 Customer ${customer.id} (${customer.emailAddress}) registered in channel ${registrationChannelId}`);
 
