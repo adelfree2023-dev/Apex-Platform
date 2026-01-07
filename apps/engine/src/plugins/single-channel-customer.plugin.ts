@@ -4,13 +4,14 @@
  * ROOT CAUSE FIX: Vendure by default adds customers to ALL channels.
  * This plugin ensures customers are ONLY in the channel where they registered.
  * 
- * FIXED: Using AccountRegistrationEvent instead of CustomerEvent
- * CustomerEvent does NOT fire for Shop API registrations!
+ * FIXED v3: AccountRegistrationEvent.customer is undefined!
+ * We must query the customer by email from event.user.identifier
  * 
  * How it works:
  * 1. Listen for AccountRegistrationEvent (fires on Shop API registration)
- * 2. Remove customer from all channels EXCEPT the registration channel
- * 3. This prevents cross-store login
+ * 2. Get customer by email from database
+ * 3. Remove customer from all channels EXCEPT the registration channel
+ * 4. This prevents cross-store login
  */
 
 import { EventBus, TransactionalConnection, AccountRegistrationEvent } from '@vendure/core';
@@ -24,47 +25,60 @@ export async function initializeSingleChannelCustomerListeners(app: INestApplica
     const eventBus = app.get(EventBus);
     const connection = app.get(TransactionalConnection);
 
-    console.log('[SingleChannelCustomerPlugin] 🔒 Initializing customer channel isolation...');
+    console.log('[SingleChannelCustomerPlugin] 🔒 Initializing customer channel isolation v3...');
 
     // Listen for ACCOUNT REGISTRATION events (from Shop API)
     eventBus.ofType(AccountRegistrationEvent).subscribe(async (event) => {
         const ctx = event.ctx;
-        // Use (event as any).customer because TypeScript definitions may be outdated
-        // but the property exists at runtime (same approach as manager-email-plugin)
-        const customer = (event as any).customer;
         const registrationChannelId = ctx.channelId;
+        const userEmail = event.user?.identifier;
 
-        if (!customer) {
-            console.log(`[SingleChannelCustomerPlugin] ⚠️ No customer object in event, trying user.identifier`);
-            // Fallback: try to get customer ID from other sources
-            console.log(`[SingleChannelCustomerPlugin] Event user:`, event.user?.identifier);
+        if (!userEmail) {
+            console.error(`[SingleChannelCustomerPlugin] ❌ No user email in event!`);
             return;
         }
 
-        console.log(`[SingleChannelCustomerPlugin] 🆕 Customer ${customer.id} (${customer.emailAddress}) registered in channel ${registrationChannelId}`);
+        console.log(`[SingleChannelCustomerPlugin] 🆕 Registration detected for ${userEmail} in channel ${registrationChannelId}`);
 
         try {
-            // Get raw connection and delete from other channels
             const rawConnection = connection.rawConnection;
 
-            // Remove from all channels except the registration channel
-            const result = await rawConnection.query(
-                `DELETE FROM customer_channels_channel 
-                 WHERE "customerId" = $1 AND "channelId" != $2`,
-                [customer.id, registrationChannelId]
+            // STEP 1: Find customer by email (since event.customer is undefined)
+            const customerResult = await rawConnection.query(
+                `SELECT id FROM customer WHERE "emailAddress" = $1 LIMIT 1`,
+                [userEmail]
             );
 
-            const deletedCount = result.rowCount || (Array.isArray(result) ? result.length : 0);
+            if (!customerResult || customerResult.length === 0) {
+                console.error(`[SingleChannelCustomerPlugin] ❌ Customer not found for email: ${userEmail}`);
+                return;
+            }
+
+            const customerId = customerResult[0].id;
+            console.log(`[SingleChannelCustomerPlugin] 📋 Found customer ID: ${customerId}`);
+
+            // STEP 2: Remove from all channels except the registration channel
+            const deleteResult = await rawConnection.query(
+                `DELETE FROM customer_channels_channel 
+                 WHERE "customerId" = $1 AND "channelId" != $2
+                 RETURNING "channelId"`,
+                [customerId, registrationChannelId]
+            );
+
+            const deletedCount = deleteResult.length || deleteResult.rowCount || 0;
 
             if (deletedCount > 0) {
-                console.log(`[SingleChannelCustomerPlugin] ✅ Removed customer ${customer.id} from ${deletedCount} other channels`);
+                console.log(`[SingleChannelCustomerPlugin] ✅ Removed customer ${customerId} from ${deletedCount} other channels`);
+            } else {
+                console.log(`[SingleChannelCustomerPlugin] ✓ Customer ${customerId} was already only in channel ${registrationChannelId}`);
             }
-            console.log(`[SingleChannelCustomerPlugin] 🔐 Customer ${customer.id} is now ONLY in channel ${registrationChannelId}`);
+
+            console.log(`[SingleChannelCustomerPlugin] 🔐 Customer ${customerId} (${userEmail}) is now ONLY in channel ${registrationChannelId}`);
         } catch (error) {
             console.error(`[SingleChannelCustomerPlugin] ❌ Error:`, error);
         }
     });
 
-    console.log('[SingleChannelCustomerPlugin] ✅ Customer channel isolation active!');
-    console.log('[SingleChannelCustomerPlugin] 📢 Listening for AccountRegistrationEvent (Shop API registrations)');
+    console.log('[SingleChannelCustomerPlugin] ✅ Customer channel isolation v3 active!');
+    console.log('[SingleChannelCustomerPlugin] 📢 Now queries customer by email instead of relying on event.customer');
 }

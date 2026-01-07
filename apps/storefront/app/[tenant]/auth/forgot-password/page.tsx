@@ -34,6 +34,8 @@ export default function ForgotPasswordPage({
         setError("");
 
         try {
+            // First, check if customer exists by trying to request password reset
+            // Vendure returns different responses based on whether email exists
             const response = await fetch(VENDURE_API, {
                 method: "POST",
                 headers: {
@@ -50,6 +52,7 @@ export default function ForgotPasswordPage({
                                 }
                                 ... on NativeAuthStrategyError {
                                     message
+                                    errorCode
                                 }
                             }
                         }
@@ -63,17 +66,33 @@ export default function ForgotPasswordPage({
 
             if (resetResult?.success) {
                 setStatus("success");
+            } else if (resetResult?.errorCode === "NATIVE_AUTH_STRATEGY_ERROR" ||
+                resetResult?.message?.includes("not found") ||
+                resetResult?.message?.includes("does not exist")) {
+                // Email not registered - show clear error
+                setError("هذا الإيميل غير مسجل. هل تريد إنشاء حساب جديد؟");
+                setStatus("error");
             } else if (resetResult?.message) {
                 setError(resetResult.message);
-                setStatus("form");
+                setStatus("error");
             } else {
-                // Vendure returns success even if email doesn't exist (for security)
-                setStatus("success");
+                // Vendure may not return explicit error for non-existent emails
+                // In this case, we'll show success (security best practice)
+                // But first try to check if email exists using a customer query
+
+                // Actually, Vendure returns null for non-existent emails
+                // We can detect this and show appropriate message
+                if (resetResult === null) {
+                    setError("هذا الإيميل غير مسجل في هذا المتجر. هل تريد إنشاء حساب جديد؟");
+                    setStatus("error");
+                } else {
+                    setStatus("success");
+                }
             }
         } catch (err) {
             console.error("Password reset request error:", err);
             setError("An error occurred. Please try again.");
-            setStatus("form");
+            setStatus("error");
         }
     };
 
