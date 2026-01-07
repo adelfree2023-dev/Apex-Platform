@@ -6,6 +6,7 @@ import { getTenantBySlug } from "@/lib/manager-client";
 import { notFound } from "next/navigation";
 import { CartSheet } from "@/components/cart/cart-sheet";
 import { SearchInput } from "@/components/search/search-input";
+import { UserMenu } from "@/components/auth/user-menu";
 
 export default async function TenantLayout({
   children,
@@ -55,12 +56,8 @@ export default async function TenantLayout({
               {/* Cart Sheet - shows dropdown with cart link inside */}
               <CartSheet tenantSlug={tenant} />
 
-              {/* User Menu */}
-              <Button variant="ghost" size="icon" asChild>
-                <Link href={`/${tenant}/auth/login`}>
-                  <User className="h-5 w-5" />
-                </Link>
-              </Button>
+              {/* User Menu - Smart (checks auth state) */}
+              <UserMenu tenantSlug={tenant} />
 
               {/* Mobile Menu */}
               <Button variant="ghost" size="icon" className="md:hidden">
