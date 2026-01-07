@@ -9,7 +9,6 @@ import {
     PluginCommonModule,
     VendurePlugin,
     EventBus,
-    Type,
 } from '@vendure/core';
 import {
     AccountRegistrationEvent,
@@ -19,7 +18,7 @@ import {
 const MANAGER_API_URL = process.env.MANAGER_API_URL || 'http://localhost:3000/api';
 
 /**
- * Helper to send email request to Manager API
+ * Send email request to Manager API
  */
 async function sendToManager(
     tenantId: string,
@@ -62,57 +61,45 @@ function buildUrl(channelCode: string, action: string, token?: string): string {
     return `${baseUrl}/${channelCode}/auth/${action}?token=${token || ''}`;
 }
 
+/**
+ * Initialize email event listeners
+ */
+export function initializeEmailListeners(eventBus: EventBus): void {
+    console.log('🚀 [ManagerEmailPlugin] Setting up event listeners...');
+
+    // Listen for customer registration
+    eventBus.ofType(AccountRegistrationEvent).subscribe(async (event) => {
+        const channelCode = event.ctx.channel.code;
+        const email = event.user?.identifier;
+
+        if (email) {
+            console.log(`📧 [ManagerEmail] Registration detected for ${email}`);
+
+            await sendToManager(channelCode, 'VERIFICATION', email, {
+                firstName: 'Customer',
+                verificationUrl: buildUrl(channelCode, 'verify', ''),
+            });
+        }
+    });
+
+    // Listen for password reset
+    eventBus.ofType(PasswordResetEvent).subscribe(async (event) => {
+        const channelCode = event.ctx.channel.code;
+        const email = event.user?.identifier;
+
+        if (email) {
+            console.log(`📧 [ManagerEmail] Password reset for ${email}`);
+
+            await sendToManager(channelCode, 'PASSWORD_RESET', email, {
+                resetUrl: buildUrl(channelCode, 'reset-password', ''),
+            });
+        }
+    });
+
+    console.log('✅ [ManagerEmailPlugin] Event listeners registered!');
+}
+
 @VendurePlugin({
     imports: [PluginCommonModule],
-    configuration: (config) => {
-        console.log('🔌 [ManagerEmailPlugin] Configuring...');
-        return config;
-    },
 })
-export class ManagerEmailPlugin {
-    static init(): Type<ManagerEmailPlugin> {
-        return ManagerEmailPlugin;
-    }
-
-    /**
-     * Called when Vendure bootstraps
-     */
-    static async onVendureBootstrap(eventBus: EventBus): Promise<void> {
-        console.log('🚀 [ManagerEmailPlugin] Setting up event listeners...');
-
-        // Listen for customer registration
-        eventBus.ofType(AccountRegistrationEvent).subscribe(async (event) => {
-            const channelCode = event.ctx.channel.code;
-            const email = event.user?.identifier;
-
-            if (email) {
-                console.log(`📧 [ManagerEmail] Registration detected for ${email}`);
-
-                const token = (event as any).user?.getNativeAuthenticationMethod?.()?.verificationToken;
-
-                await sendToManager(channelCode, 'VERIFICATION', email, {
-                    firstName: 'Customer',
-                    verificationUrl: buildUrl(channelCode, 'verify', token),
-                });
-            }
-        });
-
-        // Listen for password reset
-        eventBus.ofType(PasswordResetEvent).subscribe(async (event) => {
-            const channelCode = event.ctx.channel.code;
-            const email = event.user?.identifier;
-
-            if (email) {
-                console.log(`📧 [ManagerEmail] Password reset for ${email}`);
-
-                const token = (event as any).user?.getNativeAuthenticationMethod?.()?.passwordResetToken;
-
-                await sendToManager(channelCode, 'PASSWORD_RESET', email, {
-                    resetUrl: buildUrl(channelCode, 'reset-password', token),
-                });
-            }
-        });
-
-        console.log('✅ [ManagerEmailPlugin] Event listeners registered!');
-    }
-}
+export class ManagerEmailPlugin { }

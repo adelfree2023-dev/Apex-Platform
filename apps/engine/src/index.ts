@@ -1,6 +1,6 @@
 import { bootstrap, EventBus } from '@vendure/core';
 import { config } from './vendure-config';
-import { ManagerEmailPlugin } from './plugins/manager-email-plugin';
+import { initializeEmailListeners } from './plugins/manager-email-plugin';
 import path from 'path';
 import fs from 'fs';
 
@@ -22,12 +22,11 @@ bootstrap(config)
         console.log('🛍️  Shop API:  http://localhost:3001/shop-api');
         console.log('═══════════════════════════════════════════════');
 
-        // Initialize ManagerEmailPlugin event listeners
+        // Initialize email event listeners
         const eventBus = app.get(EventBus);
-        await ManagerEmailPlugin.onVendureBootstrap(eventBus);
+        initializeEmailListeners(eventBus);
     })
     .catch((err: Error) => {
         console.error('Failed to start Vendure:', err);
         process.exit(1);
     });
-
