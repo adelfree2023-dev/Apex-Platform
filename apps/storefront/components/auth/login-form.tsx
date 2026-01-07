@@ -37,12 +37,14 @@ export function LoginForm({ tenantSlug, channelToken }: LoginFormProps) {
         const success = await login(email, password, channelToken);
 
         if (success) {
+            // Save current tenant for cross-tenant session detection
+            localStorage.setItem("apex-last-login-tenant", tenantSlug);
             // Refresh cart from server to get user's saved cart
             await refreshCart();
-            router.push(`/${tenantSlug}`);
-            router.refresh();
+            // Use window.location to avoid Server Action cache issues
+            window.location.href = `/${tenantSlug}`;
         } else {
-            setError("Invalid email or password");
+            setError("Invalid email or password. Or this account was registered in a different store.");
         }
     };
 

@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { CartSheet } from "@/components/cart/cart-sheet";
 import { SearchInput } from "@/components/search/search-input";
 import { UserMenu } from "@/components/auth/user-menu";
+import { TenantAuthGuardWrapper } from "@/components/auth/tenant-auth-guard-wrapper";
 
 export default async function TenantLayout({
   children,
@@ -73,7 +74,9 @@ export default async function TenantLayout({
         </header>
 
         <main className="flex-1 container mx-auto px-4 py-8">
-          {children}
+          <TenantAuthGuardWrapper tenantSlug={tenant} channelToken={tenantData.vendureChannelToken || tenant}>
+            {children}
+          </TenantAuthGuardWrapper>
         </main>
 
         <footer className="bg-white border-t py-8 mt-auto">
