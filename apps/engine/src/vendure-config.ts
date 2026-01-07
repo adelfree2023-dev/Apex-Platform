@@ -5,6 +5,7 @@ import {
 } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
+import { SingleChannelCustomerPlugin } from './plugins/single-channel-customer.plugin';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -59,5 +60,8 @@ export const config: VendureConfig = {
                 hideVersion: false,
             },
         }),
+
+        // Customer Isolation - Restrict customer to registration channel only
+        SingleChannelCustomerPlugin,
     ],
 };

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Unique build ID to prevent Server Action cache issues after deployments
+  generateBuildId: async () => `build-${Date.now()}`,
+
   // Image configuration for external assets
   images: {
     remotePatterns: [
