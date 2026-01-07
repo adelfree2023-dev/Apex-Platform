@@ -72,8 +72,9 @@ export function AccountDashboard({ tenantSlug, channelToken }: AccountDashboardP
                         lastName: activeCustomer.lastName,
                     });
                 } else {
-                    // No active session - user needs to login
+                    // No active session - clear any stale local auth state
                     setCustomer(null);
+                    logout(); // Clear zustand persist state
                 }
             } catch (err) {
                 console.error("Failed to fetch customer:", err);
