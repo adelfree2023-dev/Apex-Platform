@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
+import { useCartStore } from "@/lib/cart-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ interface LoginFormProps {
 export function LoginForm({ tenantSlug, channelToken }: LoginFormProps) {
     const router = useRouter();
     const { login, isLoading } = useAuthStore(tenantSlug);
+    const { refreshCart } = useCartStore(tenantSlug);
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -35,6 +37,8 @@ export function LoginForm({ tenantSlug, channelToken }: LoginFormProps) {
         const success = await login(email, password, channelToken);
 
         if (success) {
+            // Refresh cart from server to get user's saved cart
+            await refreshCart();
             router.push(`/${tenantSlug}`);
             router.refresh();
         } else {
