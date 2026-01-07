@@ -5,7 +5,7 @@ import {
 } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
-import { EmailPlugin, defaultEmailHandlers } from '@vendure/email-plugin';
+import { ManagerEmailPlugin } from './plugins/manager-email-plugin';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -49,26 +49,11 @@ export const config: VendureConfig = {
         }),
         DefaultJobQueuePlugin.init({ useDatabaseForBuffer: true }),
         DefaultSearchPlugin.init({ bufferUpdates: false, indexStockStatus: true }),
-        EmailPlugin.init({
-            devMode: IS_DEV,
-            outputPath: IS_DEV ? path.join(__dirname, '../static/email/test-emails') : undefined,
-            route: 'mailbox',
-            handlers: defaultEmailHandlers,
-            templatePath: path.join(__dirname, '../static/email/templates'),
-            globalTemplateVars: {
-                fromAddress: process.env.SMTP_FROM || '"Apex Store" <noreply@kitvet.com>',
-            },
-            transport: {
-                type: 'smtp',
-                host: process.env.SMTP_HOST || 'smtp.gmail.com',
-                port: Number(process.env.SMTP_PORT) || 587,
-                secure: false,
-                auth: {
-                    user: process.env.SMTP_USER || '',
-                    pass: process.env.SMTP_PASS || '',
-                },
-            },
-        }),
+
+        // 🔗 Manager Email Plugin - Routes all emails through Manager API
+        // This enables tenant-specific SMTP settings
+        ManagerEmailPlugin,
+
         AdminUiPlugin.init({
             route: 'admin',
             port: 3002,
