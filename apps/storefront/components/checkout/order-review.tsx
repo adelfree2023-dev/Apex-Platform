@@ -45,8 +45,8 @@ export function OrderReview({
             <div className="bg-white rounded-2xl border p-6">
                 <h2 className="text-xl font-semibold mb-4">Order Items</h2>
                 <div className="space-y-4">
-                    {items.map((item) => (
-                        <div key={item.variantId} className="flex gap-4 items-center">
+                    {items.map((item, index) => (
+                        <div key={`${item.variantId}-${index}`} className="flex gap-4 items-center">
                             <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                 {item.image ? (
                                     <Image src={item.image} alt={item.name} fill className="object-cover" />

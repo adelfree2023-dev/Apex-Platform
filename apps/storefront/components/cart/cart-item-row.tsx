@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Minus, Trash2 } from "lucide-react";
 
 interface CartItem {
-    variantId: string;
+    id: string;
     productId: string;
     name: string;
     slug: string;
@@ -55,7 +55,7 @@ export function CartItemRow({ item, tenantSlug }: CartItemRowProps) {
                         {item.name}
                     </Link>
                     <button
-                        onClick={() => removeItem(item.variantId)}
+                        onClick={() => removeItem(item.id)}
                         className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 mt-1"
                     >
                         <Trash2 className="h-3 w-3" />
@@ -78,7 +78,7 @@ export function CartItemRow({ item, tenantSlug }: CartItemRowProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1}
                     >
                         <Minus className="h-4 w-4" />
@@ -88,7 +88,7 @@ export function CartItemRow({ item, tenantSlug }: CartItemRowProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>

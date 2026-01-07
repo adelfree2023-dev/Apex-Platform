@@ -54,7 +54,7 @@ export function CartPageContent({ tenantSlug }: CartPageContentProps) {
                 {/* Items */}
                 {items.map((item, index) => (
                     <CartItemRow
-                        key={`${item.variantId}-${index}`}
+                        key={`${item.id}-${index}`}
                         item={item}
                         tenantSlug={tenantSlug}
                     />
