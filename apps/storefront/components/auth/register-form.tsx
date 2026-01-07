@@ -6,7 +6,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
 
 interface RegisterFormProps {
     tenantSlug: string;
@@ -26,6 +26,8 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -33,25 +35,33 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Prevent double submission
+        if (isSubmitting || success) return;
+
         setError("");
+        setIsSubmitting(true);
 
         // Validation
         if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
             setError("Please fill in all fields");
+            setIsSubmitting(false);
             return;
         }
 
         if (formData.password.length < 6) {
             setError("Password must be at least 6 characters");
+            setIsSubmitting(false);
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match");
+            setIsSubmitting(false);
             return;
         }
 
-        const success = await register(
+        const result = await register(
             {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -61,13 +71,32 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
             channelToken
         );
 
-        if (success) {
-            router.push(`/${tenantSlug}`);
-            router.refresh();
+        if (result) {
+            setSuccess(true);
+            // Redirect to account page after short delay
+            setTimeout(() => {
+                router.push(`/${tenantSlug}/account`);
+                router.refresh();
+            }, 1500);
         } else {
             setError("Registration failed. Email may already be in use.");
+            setIsSubmitting(false);
         }
     };
+
+    // Show success message
+    if (success) {
+        return (
+            <div className="text-center space-y-4 bg-white rounded-2xl border p-8">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+                <h3 className="text-xl font-semibold text-gray-900">Account Created!</h3>
+                <p className="text-gray-600">
+                    Welcome, {formData.firstName}! Redirecting to your account...
+                </p>
+                <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border p-6">
@@ -150,8 +179,8 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
                 />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating account...
