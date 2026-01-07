@@ -160,12 +160,9 @@ function createAuthStore(tenantSlug: string) {
 
                         set({ isLoading: false });
 
-                        if (registerResult?.success) {
-                            // Auto-login after registration
-                            return await get().login(data.email, data.password, channelToken);
-                        }
-
-                        return false;
+                        // Return true if registration succeeded
+                        // Note: User must verify email before they can login
+                        return registerResult?.success === true;
                     } catch (error) {
                         console.error("Register error:", error);
                         set({ isLoading: false });

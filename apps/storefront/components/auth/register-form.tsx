@@ -84,16 +84,26 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
         }
     };
 
-    // Show success message
+    // Show success message - email verification required
     if (success) {
         return (
             <div className="text-center space-y-4 bg-white rounded-2xl border p-8">
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
                 <h3 className="text-xl font-semibold text-gray-900">Account Created!</h3>
                 <p className="text-gray-600">
-                    Welcome, {formData.firstName}! Redirecting to your account...
+                    Welcome, {formData.firstName}! We've sent a verification email to:
                 </p>
-                <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                <p className="font-medium text-gray-900">{formData.email}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+                    Please check your email and click the verification link to activate your account.
+                </div>
+                <Button
+                    variant="outline"
+                    onClick={() => router.push(`/${tenantSlug}/auth/login`)}
+                    className="mt-4"
+                >
+                    Go to Login
+                </Button>
             </div>
         );
     }
