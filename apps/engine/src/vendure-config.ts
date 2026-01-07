@@ -5,7 +5,6 @@ import {
 } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
-import { ManagerEmailPlugin } from './plugins/manager-email-plugin';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -50,9 +49,7 @@ export const config: VendureConfig = {
         DefaultJobQueuePlugin.init({ useDatabaseForBuffer: true }),
         DefaultSearchPlugin.init({ bufferUpdates: false, indexStockStatus: true }),
 
-        // 🔗 Manager Email Plugin - Routes all emails through Manager API
-        // This enables tenant-specific SMTP settings
-        ManagerEmailPlugin,
+        // Email is handled by initializeEmailListeners() in index.ts
 
         AdminUiPlugin.init({
             route: 'admin',
