@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * Cart Store - Vendure-backed Cart State Management
+ * Cart Store - Vendure-backed Cart State Management using Zustand
  * 
  * This store uses Vendure's activeOrder API for cart operations.
- * The cart is automatically bound to the user via session cookies.
+ * Uses Zustand for SHARED state across all components.
  * 
- * Key Differences from localStorage version:
- * - Cart persists server-side
- * - Each user has their own cart
- * - Stock validation is automatic
- * - Cart survives browser close (for logged-in users)
+ * Key Features:
+ * - Single shared cart state across ALL components
+ * - Server-side persistence via Vendure
+ * - Automatic user binding via session cookies
+ * - Real-time stock validation
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { create } from 'zustand';
 import {
     getCart,
     addToCart as vendureAddToCart,
@@ -31,7 +31,7 @@ import {
 
 export interface CartItem {
     id: string; // Variant ID
-    lineId: string; // Vendure order line ID (needed for updates)
+    lineId: string; // Vendure order line ID
     productId: string;
     name: string;
     price: number;
@@ -41,87 +41,87 @@ export interface CartItem {
     currencyCode?: string;
 }
 
-export interface CartState {
-    items: CartItem[];
+interface CartStoreState {
+    order: VendureOrder | null;
     isLoading: boolean;
     error: string | null;
-    totalItems: number;
-    totalPrice: number;
+    channelToken: string;
+    _hasHydrated: boolean;
 }
 
-export interface CartActions {
-    addItem: (variantId: string, quantity?: number) => Promise<CartOperationResult>;
-    removeItem: (lineId: string) => Promise<CartOperationResult>;
-    updateQuantity: (lineId: string, quantity: number) => Promise<CartOperationResult>;
-    clearCart: () => Promise<CartOperationResult>;
-    refreshCart: () => Promise<void>;
+interface CartStoreActions {
+    setOrder: (order: VendureOrder | null) => void;
+    setLoading: (loading: boolean) => void;
+    setError: (error: string | null) => void;
+    setChannelToken: (token: string) => void;
+    setHydrated: (hydrated: boolean) => void;
 }
 
 // =============================================================================
-// Cart Hook
+// Zustand Store - Per Tenant
 // =============================================================================
 
-/**
- * Hook to access and manage the shopping cart.
- * Uses Vendure's activeOrder API for true user+store binding.
- */
-export function useCartStore(tenantSlug: string): CartState & CartActions {
-    const channelToken = tenantSlug; // Channel token is the tenant slug
+const storeCache: Record<string, ReturnType<typeof createCartZustandStore>> = {};
 
-    // State
-    const [order, setOrder] = useState<VendureOrder | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+function createCartZustandStore(tenantSlug: string) {
+    return create<CartStoreState & CartStoreActions>((set) => ({
+        order: null,
+        isLoading: true,
+        error: null,
+        channelToken: tenantSlug,
+        _hasHydrated: false,
+        setOrder: (order) => set({ order }),
+        setLoading: (isLoading) => set({ isLoading }),
+        setError: (error) => set({ error }),
+        setChannelToken: (channelToken) => set({ channelToken }),
+        setHydrated: (_hasHydrated) => set({ _hasHydrated }),
+    }));
+}
+
+function getOrCreateStore(tenantSlug: string) {
+    if (!storeCache[tenantSlug]) {
+        storeCache[tenantSlug] = createCartZustandStore(tenantSlug);
+    }
+    return storeCache[tenantSlug];
+}
+
+// =============================================================================
+// Cart Hook - Uses Shared Zustand Store
+// =============================================================================
+
+export function useCartStore(tenantSlug: string) {
+    const store = getOrCreateStore(tenantSlug);
+    const {
+        order,
+        isLoading,
+        error,
+        _hasHydrated,
+        setOrder,
+        setLoading,
+        setError,
+        setHydrated,
+    } = store();
 
     // Derived state
     const items = orderToCartItems(order) as CartItem[];
     const totalItems = order?.totalQuantity || 0;
     const totalPrice = order?.totalWithTax || 0;
 
-    // Fetch cart on mount
-    useEffect(() => {
-        if (!channelToken) return;
+    // Fetch cart on first mount (hydration)
+    if (!_hasHydrated && typeof window !== 'undefined') {
+        setHydrated(true);
+        fetchCartData(tenantSlug, setOrder, setLoading, setError);
+    }
 
-        const fetchCart = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const activeOrder = await getCart(channelToken);
-                setOrder(activeOrder);
-            } catch (err) {
-                console.error("Failed to fetch cart:", err);
-                setError("Failed to load cart");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchCart();
-    }, [channelToken]);
-
-    // Refresh cart
-    const refreshCart = useCallback(async () => {
-        if (!channelToken) return;
-        setIsLoading(true);
-        try {
-            const activeOrder = await getCart(channelToken);
-            setOrder(activeOrder);
-            setError(null);
-        } catch (err) {
-            console.error("Failed to refresh cart:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [channelToken]);
+    // Refresh cart from server
+    const refreshCart = async () => {
+        await fetchCartData(tenantSlug, setOrder, setLoading, setError);
+    };
 
     // Add item to cart
-    const addItem = useCallback(async (variantId: string, quantity: number = 1): Promise<CartOperationResult> => {
-        if (!channelToken) {
-            return { success: false, message: "No channel token" };
-        }
-
+    const addItem = async (variantId: string, quantity: number = 1): Promise<CartOperationResult> => {
         setError(null);
-        const result = await vendureAddToCart(channelToken, variantId, quantity);
+        const result = await vendureAddToCart(tenantSlug, variantId, quantity);
 
         if (result.success && result.order) {
             setOrder(result.order);
@@ -132,15 +132,11 @@ export function useCartStore(tenantSlug: string): CartState & CartActions {
         }
 
         return result;
-    }, [channelToken]);
+    };
 
     // Remove item from cart
-    const removeItem = useCallback(async (lineId: string): Promise<CartOperationResult> => {
-        if (!channelToken) {
-            return { success: false, message: "No channel token" };
-        }
-
-        const result = await vendureRemoveFromCart(channelToken, lineId);
+    const removeItem = async (lineId: string): Promise<CartOperationResult> => {
+        const result = await vendureRemoveFromCart(tenantSlug, lineId);
 
         if (result.success && result.order) {
             setOrder(result.order);
@@ -149,16 +145,12 @@ export function useCartStore(tenantSlug: string): CartState & CartActions {
         }
 
         return result;
-    }, [channelToken]);
+    };
 
     // Update item quantity
-    const updateQuantity = useCallback(async (lineId: string, quantity: number): Promise<CartOperationResult> => {
-        if (!channelToken) {
-            return { success: false, message: "No channel token" };
-        }
-
+    const updateQuantity = async (lineId: string, quantity: number): Promise<CartOperationResult> => {
         setError(null);
-        const result = await vendureUpdateCartQty(channelToken, lineId, quantity);
+        const result = await vendureUpdateCartQty(tenantSlug, lineId, quantity);
 
         if (result.success && result.order) {
             setOrder(result.order);
@@ -169,15 +161,11 @@ export function useCartStore(tenantSlug: string): CartState & CartActions {
         }
 
         return result;
-    }, [channelToken]);
+    };
 
     // Clear entire cart
-    const clearCart = useCallback(async (): Promise<CartOperationResult> => {
-        if (!channelToken) {
-            return { success: false, message: "No channel token" };
-        }
-
-        const result = await vendureClearCart(channelToken);
+    const clearCart = async (): Promise<CartOperationResult> => {
+        const result = await vendureClearCart(tenantSlug);
 
         if (result.success) {
             setOrder(null);
@@ -186,7 +174,7 @@ export function useCartStore(tenantSlug: string): CartState & CartActions {
         }
 
         return result;
-    }, [channelToken]);
+    };
 
     return {
         // State
@@ -205,20 +193,37 @@ export function useCartStore(tenantSlug: string): CartState & CartActions {
 }
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+async function fetchCartData(
+    channelToken: string,
+    setOrder: (order: VendureOrder | null) => void,
+    setLoading: (loading: boolean) => void,
+    setError: (error: string | null) => void
+) {
+    setLoading(true);
+    setError(null);
+    try {
+        const activeOrder = await getCart(channelToken);
+        setOrder(activeOrder);
+    } catch (err) {
+        console.error("Failed to fetch cart:", err);
+        setError("Failed to load cart");
+    } finally {
+        setLoading(false);
+    }
+}
+
+// =============================================================================
 // Legacy Compatibility
 // =============================================================================
 
-/**
- * Get cart summary (backward compatible)
- */
 export function useCartSummary(tenantSlug: string) {
     const { totalItems, totalPrice } = useCartStore(tenantSlug);
     return { totalItems, totalPrice };
 }
 
-/**
- * Get quantity of a specific item in cart
- */
 export function useCartItemQuantity(tenantSlug: string, variantId: string): number {
     const { items } = useCartStore(tenantSlug);
     const item = items.find((i) => i.id === variantId);
