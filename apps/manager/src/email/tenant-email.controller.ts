@@ -11,7 +11,7 @@ import { TenantEmailService } from './tenant-email.service';
 import { UpdateEmailSettingsDto, UpdateEmailTemplateDto, SendTestEmailDto, SendTenantEmailDto } from './dto/email.dto';
 import { EmailType } from '@prisma/client';
 
-@Controller('api/tenants/:tenantId/email')
+@Controller('tenants/:tenantId/email')
 export class TenantEmailController {
     constructor(private readonly emailService: TenantEmailService) { }
 
@@ -136,7 +136,7 @@ export class TenantEmailController {
 // INTERNAL CONTROLLER (for Vendure integration)
 // ============================================
 
-@Controller('api/internal')
+@Controller('internal')
 export class InternalEmailController {
     constructor(private readonly emailService: TenantEmailService) { }
 
