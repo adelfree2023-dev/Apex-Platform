@@ -44,6 +44,16 @@ enum LicenseStatus {
   REVOKED // License was revoked
 }
 
+/// Email template types
+enum EmailType {
+  VERIFICATION
+  WELCOME
+  PASSWORD_RESET
+  ORDER_CONFIRMATION
+  ORDER_SHIPPED
+  ORDER_CANCELLED
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -66,8 +76,10 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  license License?
-  users   TenantUser[]
+  license       License?
+  users         TenantUser[]
+  emailSettings TenantEmailSettings?
+  emailTemplates EmailTemplate[]
 
   @@map("tenants")
 }
@@ -187,4 +199,91 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================
+// EMAIL SYSTEM
+// ============================================
+
+/// Email settings per tenant
+model TenantEmailSettings {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // SMTP Configuration
+  smtpHost      String   @default("smtp.gmail.com")
+  smtpPort      Int      @default(587)
+  smtpUser      String?
+  smtpPass      String?  // Encrypted
+  smtpSecure    Boolean  @default(false)
+  
+  // Email Identity
+  fromName      String   @default("My Store")
+  fromEmail     String?
+  replyToEmail  String?
+  
+  // Policies
+  requireEmailVerification  Boolean @default(false)
+  blockTempEmails           Boolean @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tenant_email_settings")
+}
+
+/// Email templates per tenant
+model EmailTemplate {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  type      EmailType
+  subject   String
+  bodyHtml  String
+  bodyText  String?
+  
+  isActive  Boolean   @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([tenantId, type])
+  @@map("email_templates")
+}
+
+/// Blocked email domains (temp mail protection)
+model BlockedEmailDomain {
+  id        String   @id @default(cuid())
+  domain    String   @unique  // e.g., "mailinator.com"
+  reason    String?
+  isGlobal  Boolean  @default(true)  // Apply to all tenants
+  tenantId  String?  // If not global, specific tenant
+  
+  createdAt DateTime @default(now())
+
+  @@map("blocked_email_domains")
+}
+
+/// Email logs for tracking
+model EmailLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  
+  type      EmailType
+  toEmail   String
+  subject   String
+  status    String   @default("sent")  // sent, failed, bounced
+  errorMsg  String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([toEmail])
+  @@index([createdAt])
+  @@map("email_logs")
 }
