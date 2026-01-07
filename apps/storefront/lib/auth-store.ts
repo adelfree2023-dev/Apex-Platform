@@ -139,6 +139,7 @@ function createAuthStore(tenantSlug: string) {
                                                 success
                                             }
                                             ... on ErrorResult {
+                                                errorCode
                                                 message
                                             }
                                         }
@@ -160,9 +161,18 @@ function createAuthStore(tenantSlug: string) {
 
                         set({ isLoading: false });
 
-                        // Return true if registration succeeded
-                        // Note: User must verify email before they can login
-                        return registerResult?.success === true;
+                        // Check for success
+                        if (registerResult?.success === true) {
+                            return true;
+                        }
+
+                        // Check for error (duplicate email, etc)
+                        if (registerResult?.errorCode) {
+                            console.error("Register error:", registerResult.errorCode, registerResult.message);
+                            return false;
+                        }
+
+                        return false;
                     } catch (error) {
                         console.error("Register error:", error);
                         set({ isLoading: false });
