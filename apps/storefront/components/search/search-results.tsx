@@ -13,7 +13,9 @@ interface SearchResult {
         preview: string;
     };
     price?: {
-        value: number;
+        value?: number;
+        min?: number;
+        max?: number;
     };
     currencyCode?: string;
 }
@@ -92,9 +94,9 @@ export function SearchResults({ results, query, tenantSlug }: SearchResultsProps
                     <h3 className="font-medium text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
                         {product.productName}
                     </h3>
-                    {product.price && (
+                    {product.price && (product.price.value || product.price.min) && (
                         <p className="text-lg font-semibold text-primary mt-1">
-                            ${(product.price.value / 100).toFixed(2)}
+                            ${((product.price.value || product.price.min || 0) / 100).toFixed(2)}
                         </p>
                     )}
                 </Link>
