@@ -5,15 +5,8 @@
  * to enable tenant-specific SMTP settings.
  */
 
-import {
-    PluginCommonModule,
-    VendurePlugin,
-    EventBus,
-} from '@vendure/core';
-import {
-    AccountRegistrationEvent,
-    PasswordResetEvent,
-} from '@vendure/core';
+import { EventBus } from '@vendure/core';
+import { AccountRegistrationEvent, PasswordResetEvent } from '@vendure/core';
 
 const MANAGER_API_URL = process.env.MANAGER_API_URL || 'http://localhost:3000/api';
 
@@ -63,6 +56,7 @@ function buildUrl(channelCode: string, action: string, token?: string): string {
 
 /**
  * Initialize email event listeners
+ * Called from index.ts after Vendure bootstrap
  */
 export function initializeEmailListeners(eventBus: EventBus): void {
     console.log('🚀 [ManagerEmailPlugin] Setting up event listeners...');
@@ -98,8 +92,3 @@ export function initializeEmailListeners(eventBus: EventBus): void {
 
     console.log('✅ [ManagerEmailPlugin] Event listeners registered!');
 }
-
-@VendurePlugin({
-    imports: [PluginCommonModule],
-})
-export class ManagerEmailPlugin { }
