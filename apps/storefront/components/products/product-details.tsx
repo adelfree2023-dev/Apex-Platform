@@ -2,35 +2,39 @@
 
 import { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
 import { useState } from "react";
 import { useTenant } from "@/lib/tenant-context";
 
 export function ProductDetails({ product }: { product: Product }) {
     const { slug } = useTenant();
-    const { addItem } = useCartStore(slug);
+    const { addItem, isLoading } = useCartStore(slug);
     const [selectedVariantId, setSelectedVariantId] = useState<string>(
         product.variants[0]?.id
     );
+    const [addStatus, setAddStatus] = useState<"idle" | "adding" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState<string>("");
 
     const selectedVariant = product.variants.find(v => v.id === selectedVariantId) || product.variants[0];
 
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         if (!selectedVariant) return;
 
-        addItem({
-            id: selectedVariant.id,
-            productId: product.id,
-            name: product.name,
-            price: selectedVariant.price,
-            quantity: 1,
-            slug: product.slug,
-            image: product.featuredAsset?.preview
-        });
+        setAddStatus("adding");
+        setErrorMessage("");
 
-        // Optional: Toast notification
-        alert("Added to cart!");
+        // New API: addItem(variantId, quantity)
+        const result = await addItem(selectedVariant.id, 1);
+
+        if (result.success) {
+            setAddStatus("success");
+            setTimeout(() => setAddStatus("idle"), 2000);
+        } else {
+            setAddStatus("error");
+            setErrorMessage(result.message || "Failed to add to cart");
+            setTimeout(() => setAddStatus("idle"), 3000);
+        }
     };
 
     return (
@@ -83,10 +87,38 @@ export function ProductDetails({ product }: { product: Product }) {
                     </div>
                 )}
 
+                {/* Error Message */}
+                {errorMessage && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        {errorMessage}
+                    </div>
+                )}
+
+                {/* Add to Cart Button */}
                 <div className="pt-4">
-                    <Button size="lg" className="w-full md:w-auto" onClick={handleAddToCart}>
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        Add to Cart
+                    <Button
+                        size="lg"
+                        className="w-full md:w-auto"
+                        onClick={handleAddToCart}
+                        disabled={addStatus === "adding" || isLoading}
+                    >
+                        {addStatus === "adding" ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Adding...
+                            </>
+                        ) : addStatus === "success" ? (
+                            <>
+                                <CheckCircle className="mr-2 h-5 w-5" />
+                                Added!
+                            </>
+                        ) : (
+                            <>
+                                <ShoppingCart className="mr-2 h-5 w-5" />
+                                Add to Cart
+                            </>
+                        )}
                     </Button>
                 </div>
             </div>

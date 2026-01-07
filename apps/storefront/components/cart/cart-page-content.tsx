@@ -4,7 +4,7 @@ import { useCartStore } from "@/lib/cart-store";
 import { CartItemRow } from "./cart-item-row";
 import { CartSummary } from "./cart-summary";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, ArrowLeft } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 interface CartPageContentProps {
@@ -12,8 +12,16 @@ interface CartPageContentProps {
 }
 
 export function CartPageContent({ tenantSlug }: CartPageContentProps) {
-    const { items, clearCart, getSummary } = useCartStore(tenantSlug);
-    const { totalItems, totalPrice } = getSummary();
+    const { items, isLoading, error, totalItems, totalPrice, clearCart } = useCartStore(tenantSlug);
+
+    // Loading state
+    if (isLoading && items.length === 0) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     // Empty cart state
     if (items.length === 0) {
@@ -43,6 +51,13 @@ export function CartPageContent({ tenantSlug }: CartPageContentProps) {
         <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
+                {/* Error Display */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
+                        {error}
+                    </div>
+                )}
+
                 {/* Header Row */}
                 <div className="hidden md:grid grid-cols-12 gap-4 text-sm font-medium text-gray-500 pb-4 border-b">
                     <div className="col-span-6">Product</div>
@@ -54,7 +69,7 @@ export function CartPageContent({ tenantSlug }: CartPageContentProps) {
                 {/* Items */}
                 {items.map((item, index) => (
                     <CartItemRow
-                        key={`${item.id}-${index}`}
+                        key={item.lineId || `${item.id}-${index}`}
                         item={item}
                         tenantSlug={tenantSlug}
                     />
@@ -68,13 +83,20 @@ export function CartPageContent({ tenantSlug }: CartPageContentProps) {
                             Continue Shopping
                         </Link>
                     </Button>
-                    <Button variant="outline" onClick={clearCart}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        disabled={isLoading}
+                        onClick={() => clearCart()}
+                    >
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Clear Cart
                     </Button>
                 </div>
             </div>
 
-            {/* Cart Summary */}
+            {/* Summary Sidebar */}
             <div className="lg:col-span-1">
                 <CartSummary
                     totalItems={totalItems}

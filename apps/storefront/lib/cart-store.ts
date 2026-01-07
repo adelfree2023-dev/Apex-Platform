@@ -1,11 +1,37 @@
 'use client';
 
-import { create } from 'zustand';
-import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { useEffect, useState } from 'react';
+/**
+ * Cart Store - Vendure-backed Cart State Management
+ * 
+ * This store uses Vendure's activeOrder API for cart operations.
+ * The cart is automatically bound to the user via session cookies.
+ * 
+ * Key Differences from localStorage version:
+ * - Cart persists server-side
+ * - Each user has their own cart
+ * - Stock validation is automatic
+ * - Cart survives browser close (for logged-in users)
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import {
+    getCart,
+    addToCart as vendureAddToCart,
+    removeFromCart as vendureRemoveFromCart,
+    updateCartQuantity as vendureUpdateCartQty,
+    clearCart as vendureClearCart,
+    orderToCartItems,
+    VendureOrder,
+    CartOperationResult,
+} from './vendure-cart';
+
+// =============================================================================
+// Types
+// =============================================================================
 
 export interface CartItem {
     id: string; // Variant ID
+    lineId: string; // Vendure order line ID (needed for updates)
     productId: string;
     name: string;
     price: number;
@@ -15,111 +41,186 @@ export interface CartItem {
     currencyCode?: string;
 }
 
-interface CartState {
+export interface CartState {
     items: CartItem[];
-    addItem: (item: CartItem) => void;
-    removeItem: (itemId: string) => void;
-    updateQuantity: (itemId: string, quantity: number) => void;
-    clearCart: () => void;
-    getSummary: () => { totalItems: number; totalPrice: number };
+    isLoading: boolean;
+    error: string | null;
+    totalItems: number;
+    totalPrice: number;
 }
 
-// 🔥 Factory function to create a tenant-specific cart store
-// Each tenant gets its own localStorage key: "apex-cart-{tenantSlug}"
-const createCartStore = (tenantSlug: string) => {
-    return create<CartState>()(
-        persist(
-            (set, get) => ({
-                items: [],
+export interface CartActions {
+    addItem: (variantId: string, quantity?: number) => Promise<CartOperationResult>;
+    removeItem: (lineId: string) => Promise<CartOperationResult>;
+    updateQuantity: (lineId: string, quantity: number) => Promise<CartOperationResult>;
+    clearCart: () => Promise<CartOperationResult>;
+    refreshCart: () => Promise<void>;
+}
 
-                addItem: (newItem) => {
-                    const items = get().items;
-                    const existingItem = items.find((item) => item.id === newItem.id);
+// =============================================================================
+// Cart Hook
+// =============================================================================
 
-                    if (existingItem) {
-                        set({
-                            items: items.map((item) =>
-                                item.id === newItem.id
-                                    ? { ...item, quantity: item.quantity + newItem.quantity }
-                                    : item
-                            ),
-                        });
-                    } else {
-                        set({ items: [...items, newItem] });
-                    }
-                },
+/**
+ * Hook to access and manage the shopping cart.
+ * Uses Vendure's activeOrder API for true user+store binding.
+ */
+export function useCartStore(tenantSlug: string): CartState & CartActions {
+    const channelToken = tenantSlug; // Channel token is the tenant slug
 
-                removeItem: (itemId) => {
-                    set({ items: get().items.filter((item) => item.id !== itemId) });
-                },
+    // State
+    const [order, setOrder] = useState<VendureOrder | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-                updateQuantity: (itemId, quantity) => {
-                    if (quantity <= 0) {
-                        get().removeItem(itemId);
-                        return;
-                    }
-                    set({
-                        items: get().items.map((item) =>
-                            item.id === itemId ? { ...item, quantity } : item
-                        ),
-                    });
-                },
+    // Derived state
+    const items = orderToCartItems(order) as CartItem[];
+    const totalItems = order?.totalQuantity || 0;
+    const totalPrice = order?.totalWithTax || 0;
 
-                clearCart: () => set({ items: [] }),
-
-                getSummary: () => {
-                    const items = get().items;
-                    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-                    const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                    return { totalItems, totalPrice };
-                },
-            }),
-            {
-                // 🔥 DYNAMIC KEY: Each tenant has its own storage
-                name: `apex-cart-${tenantSlug}`,
-                storage: createJSONStorage(() => localStorage),
-            }
-        )
-    );
-};
-
-// Cache of created stores to avoid recreating on each render
-const storeCache: Record<string, ReturnType<typeof createCartStore>> = {};
-
-// 🔥 Hook to get/create tenant-specific cart store
-export function useCartStore(tenantSlug: string) {
-    const [mounted, setMounted] = useState(false);
-
+    // Fetch cart on mount
     useEffect(() => {
-        setMounted(true);
-    }, []);
+        if (!channelToken) return;
 
-    // Create or get cached store for this tenant
-    if (!storeCache[tenantSlug]) {
-        storeCache[tenantSlug] = createCartStore(tenantSlug);
-    }
-
-    const store = storeCache[tenantSlug];
-    const state = store();
-
-    // Return safe defaults before hydration
-    if (!mounted) {
-        return {
-            items: [] as CartItem[],
-            addItem: () => { },
-            removeItem: () => { },
-            updateQuantity: () => { },
-            clearCart: () => { },
-            getSummary: () => ({ totalItems: 0, totalPrice: 0 }),
+        const fetchCart = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const activeOrder = await getCart(channelToken);
+                setOrder(activeOrder);
+            } catch (err) {
+                console.error("Failed to fetch cart:", err);
+                setError("Failed to load cart");
+            } finally {
+                setIsLoading(false);
+            }
         };
-    }
 
-    return state;
+        fetchCart();
+    }, [channelToken]);
+
+    // Refresh cart
+    const refreshCart = useCallback(async () => {
+        if (!channelToken) return;
+        setIsLoading(true);
+        try {
+            const activeOrder = await getCart(channelToken);
+            setOrder(activeOrder);
+            setError(null);
+        } catch (err) {
+            console.error("Failed to refresh cart:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [channelToken]);
+
+    // Add item to cart
+    const addItem = useCallback(async (variantId: string, quantity: number = 1): Promise<CartOperationResult> => {
+        if (!channelToken) {
+            return { success: false, message: "No channel token" };
+        }
+
+        setError(null);
+        const result = await vendureAddToCart(channelToken, variantId, quantity);
+
+        if (result.success && result.order) {
+            setOrder(result.order);
+        } else if (result.errorCode === "INSUFFICIENT_STOCK_ERROR") {
+            setError(`Only ${result.quantityAvailable} items available`);
+        } else if (result.message) {
+            setError(result.message);
+        }
+
+        return result;
+    }, [channelToken]);
+
+    // Remove item from cart
+    const removeItem = useCallback(async (lineId: string): Promise<CartOperationResult> => {
+        if (!channelToken) {
+            return { success: false, message: "No channel token" };
+        }
+
+        const result = await vendureRemoveFromCart(channelToken, lineId);
+
+        if (result.success && result.order) {
+            setOrder(result.order);
+        } else if (result.message) {
+            setError(result.message);
+        }
+
+        return result;
+    }, [channelToken]);
+
+    // Update item quantity
+    const updateQuantity = useCallback(async (lineId: string, quantity: number): Promise<CartOperationResult> => {
+        if (!channelToken) {
+            return { success: false, message: "No channel token" };
+        }
+
+        setError(null);
+        const result = await vendureUpdateCartQty(channelToken, lineId, quantity);
+
+        if (result.success && result.order) {
+            setOrder(result.order);
+        } else if (result.errorCode === "INSUFFICIENT_STOCK_ERROR") {
+            setError(`Only ${result.quantityAvailable} items available`);
+        } else if (result.message) {
+            setError(result.message);
+        }
+
+        return result;
+    }, [channelToken]);
+
+    // Clear entire cart
+    const clearCart = useCallback(async (): Promise<CartOperationResult> => {
+        if (!channelToken) {
+            return { success: false, message: "No channel token" };
+        }
+
+        const result = await vendureClearCart(channelToken);
+
+        if (result.success) {
+            setOrder(null);
+        } else if (result.message) {
+            setError(result.message);
+        }
+
+        return result;
+    }, [channelToken]);
+
+    return {
+        // State
+        items,
+        isLoading,
+        error,
+        totalItems,
+        totalPrice,
+        // Actions
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        refreshCart,
+    };
 }
 
-// 🔥 Helper to get item quantity (for AddToCartBtn)
-export function useCartItemQuantity(tenantSlug: string, itemId: string): number {
+// =============================================================================
+// Legacy Compatibility
+// =============================================================================
+
+/**
+ * Get cart summary (backward compatible)
+ */
+export function useCartSummary(tenantSlug: string) {
+    const { totalItems, totalPrice } = useCartStore(tenantSlug);
+    return { totalItems, totalPrice };
+}
+
+/**
+ * Get quantity of a specific item in cart
+ */
+export function useCartItemQuantity(tenantSlug: string, variantId: string): number {
     const { items } = useCartStore(tenantSlug);
-    const item = items.find((i) => i.id === itemId);
+    const item = items.find((i) => i.id === variantId);
     return item?.quantity || 0;
 }

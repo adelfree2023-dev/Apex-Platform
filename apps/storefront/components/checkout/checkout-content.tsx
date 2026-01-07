@@ -32,8 +32,7 @@ export interface PaymentData {
 }
 
 export function CheckoutContent({ tenantSlug }: CheckoutContentProps) {
-    const { items, getSummary, clearCart } = useCartStore(tenantSlug);
-    const { totalItems, totalPrice } = getSummary();
+    const { items, totalItems, totalPrice, clearCart, isLoading } = useCartStore(tenantSlug);
 
     const [step, setStep] = useState(1);
     const [shippingData, setShippingData] = useState<ShippingData | null>(null);
