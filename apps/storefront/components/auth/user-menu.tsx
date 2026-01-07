@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/lib/auth-store";
+import { useCartStore } from "@/lib/cart-store";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -20,9 +21,11 @@ interface UserMenuProps {
 export function UserMenu({ tenantSlug }: UserMenuProps) {
     const router = useRouter();
     const { user, isAuthenticated, logout } = useAuthStore(tenantSlug);
+    const { clearCart } = useCartStore(tenantSlug);
 
     const handleLogout = () => {
         logout();
+        clearCart();
         router.refresh();
     };
 
