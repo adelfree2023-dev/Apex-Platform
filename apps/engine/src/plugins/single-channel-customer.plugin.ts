@@ -3,12 +3,9 @@ import {
     VendurePlugin,
     EventBus,
     TransactionalConnection,
-    Channel,
     CustomerEvent,
-    ChannelService,
-    RequestContext,
+    Injector,
 } from '@vendure/core';
-import { OnModuleInit } from '@nestjs/common';
 
 /**
  * SingleChannelCustomerPlugin
@@ -24,15 +21,17 @@ import { OnModuleInit } from '@nestjs/common';
 @VendurePlugin({
     imports: [PluginCommonModule],
 })
-export class SingleChannelCustomerPlugin implements OnModuleInit {
-    constructor(
-        private eventBus: EventBus,
-        private connection: TransactionalConnection,
-    ) { }
+export class SingleChannelCustomerPlugin {
+    static init() {
+        return SingleChannelCustomerPlugin;
+    }
 
-    async onModuleInit() {
+    static async onBootstrap(injector: Injector) {
+        const eventBus = injector.get(EventBus);
+        const connection = injector.get(TransactionalConnection);
+
         // Listen for customer creation events
-        this.eventBus.ofType(CustomerEvent).subscribe(async (event) => {
+        eventBus.ofType(CustomerEvent).subscribe(async (event) => {
             if (event.type === 'created') {
                 const ctx = event.ctx;
                 const customer = event.entity;
@@ -40,31 +39,22 @@ export class SingleChannelCustomerPlugin implements OnModuleInit {
 
                 console.log(`[SingleChannelCustomerPlugin] Customer ${customer.id} created in channel ${registrationChannelId}`);
 
-                // Get all channel assignments for this customer
-                const customerChannels = await this.connection
-                    .getRepository(ctx, 'customer_channels_channel')
-                    .createQueryBuilder()
-                    .where('"customerId" = :customerId', { customerId: customer.id })
-                    .getRawMany();
+                try {
+                    // Get raw connection and delete from other channels
+                    const rawConnection = connection.rawConnection;
 
-                // Remove from all channels except the registration channel
-                for (const cc of customerChannels) {
-                    if (cc.channelId !== registrationChannelId) {
-                        console.log(`[SingleChannelCustomerPlugin] Removing customer ${customer.id} from channel ${cc.channelId}`);
+                    // Remove from all channels except the registration channel
+                    const result = await rawConnection.query(
+                        `DELETE FROM customer_channels_channel 
+                         WHERE "customerId" = $1 AND "channelId" != $2`,
+                        [customer.id, registrationChannelId]
+                    );
 
-                        await this.connection
-                            .getRepository(ctx, 'customer_channels_channel')
-                            .createQueryBuilder()
-                            .delete()
-                            .where('"customerId" = :customerId AND "channelId" = :channelId', {
-                                customerId: customer.id,
-                                channelId: cc.channelId,
-                            })
-                            .execute();
-                    }
+                    console.log(`[SingleChannelCustomerPlugin] Removed customer ${customer.id} from ${result.rowCount || 0} other channels`);
+                    console.log(`[SingleChannelCustomerPlugin] Customer ${customer.id} is now ONLY in channel ${registrationChannelId}`);
+                } catch (error) {
+                    console.error(`[SingleChannelCustomerPlugin] Error:`, error);
                 }
-
-                console.log(`[SingleChannelCustomerPlugin] Customer ${customer.id} is now ONLY in channel ${registrationChannelId}`);
             }
         });
     }
