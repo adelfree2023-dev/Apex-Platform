@@ -5,7 +5,7 @@ import { getTenants } from "@/lib/manager-client";
 import { Store } from "lucide-react";
 
 export default async function LandingPage() {
-  let tenants = [];
+  let tenants: Array<{ id: string; slug: string; name: string }> = [];
   try {
     tenants = await getTenants();
   } catch (error) {
@@ -18,13 +18,13 @@ export default async function LandingPage() {
         <h1 className="text-4xl font-bold tracking-tight mb-2">Apex Platform</h1>
         <p className="text-gray-500">Multi-Tenant E-commerce Engine</p>
       </div>
-      
+
       <Card className="w-full max-w-md shadow-lg border-t-4 border-t-black">
         <CardHeader>
           <CardTitle>Select a Store</CardTitle>
           <CardDescription>
-            {tenants.length > 0 
-              ? "Choose one of the active stores below:" 
+            {tenants.length > 0
+              ? "Choose one of the active stores below:"
               : "No active stores found. Please create one in Admin HQ."}
           </CardDescription>
         </CardHeader>
@@ -44,13 +44,13 @@ export default async function LandingPage() {
           ))}
 
           {tenants.length === 0 && (
-             <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed">
-               <p className="text-sm text-gray-500">No stores available yet.</p>
-             </div>
+            <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed">
+              <p className="text-sm text-gray-500">No stores available yet.</p>
+            </div>
           )}
         </CardContent>
       </Card>
-      
+
       <div className="mt-8 text-xs text-gray-400">
         Connected to Manager API: {process.env.NEXT_PUBLIC_MANAGER_URL || 'http://localhost:3003'}
       </div>
