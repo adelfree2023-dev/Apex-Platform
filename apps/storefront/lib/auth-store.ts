@@ -57,6 +57,10 @@ function createAuthStore(tenantSlug: string) {
                                             ... on CurrentUser {
                                                 id
                                                 identifier
+                                                channels {
+                                                    token
+                                                    code
+                                                }
                                             }
                                             ... on InvalidCredentialsError {
                                                 message
@@ -72,6 +76,30 @@ function createAuthStore(tenantSlug: string) {
                         const loginResult = result.data?.login;
 
                         if (loginResult?.id) {
+                            // Check if customer is registered in THIS channel
+                            const customerChannels = loginResult.channels || [];
+                            const isInChannel = customerChannels.some(
+                                (ch: { token: string }) => ch.token === channelToken
+                            );
+
+                            if (!isInChannel) {
+                                // Customer registered in different store - logout and reject
+                                console.warn("Customer not registered in this channel:", channelToken);
+                                await fetch(VENDURE_API, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "vendure-token": channelToken,
+                                    },
+                                    credentials: "include",
+                                    body: JSON.stringify({
+                                        query: `mutation { logout { success } }`,
+                                    }),
+                                });
+                                set({ isLoading: false });
+                                return false;
+                            }
+
                             // Fetch full user data
                             const userResponse = await fetch(VENDURE_API, {
                                 method: "POST",
