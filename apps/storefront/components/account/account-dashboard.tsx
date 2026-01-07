@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/auth-store";
+import { useCartStore } from "@/lib/cart-store";
 import { Button } from "@/components/ui/button";
 import { User, ShoppingBag, MapPin, CreditCard, LogOut, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -26,6 +27,7 @@ const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || "http://127.0.0.1
 export function AccountDashboard({ tenantSlug, channelToken }: AccountDashboardProps) {
     const router = useRouter();
     const { user, setUser, logout } = useAuthStore(tenantSlug);
+    const { resetLocalState } = useCartStore(tenantSlug);
 
     const [customer, setCustomer] = useState<CustomerData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -102,9 +104,10 @@ export function AccountDashboard({ tenantSlug, channelToken }: AccountDashboardP
             console.error("Logout error:", err);
         }
 
-        // Clear local auth state only
+        // Clear local auth and cart state
         // Cart stays on server for when user logs back in
         logout();
+        resetLocalState();
         router.push(`/${tenantSlug}`);
         router.refresh();
     };

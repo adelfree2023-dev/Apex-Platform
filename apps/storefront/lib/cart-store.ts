@@ -176,6 +176,13 @@ export function useCartStore(tenantSlug: string) {
         return result;
     };
 
+    // Reset local state only (used for logout - cart stays on server)
+    const resetLocalState = () => {
+        setOrder(null);
+        setError(null);
+        setHydrated(false); // Will re-fetch on next mount
+    };
+
     return {
         // State
         items,
@@ -189,6 +196,7 @@ export function useCartStore(tenantSlug: string) {
         updateQuantity,
         clearCart,
         refreshCart,
+        resetLocalState, // NEW: For logout
     };
 }
 
