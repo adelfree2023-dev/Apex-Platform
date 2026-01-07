@@ -9,7 +9,7 @@ import { useTenant } from "@/lib/tenant-context";
 
 export function ProductDetails({ product }: { product: Product }) {
     const { slug } = useTenant();
-    const addItem = useCartStore((state) => state.addItem);
+    const { addItem } = useCartStore(slug);
     const [selectedVariantId, setSelectedVariantId] = useState<string>(
         product.variants[0]?.id
     );
