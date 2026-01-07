@@ -74,9 +74,32 @@ export class TenantEmailService {
     }
 
     /**
+     * Resolve tenant slug or ID to actual tenant ID
+     */
+    private async resolveTenantId(slugOrId: string): Promise<string> {
+        // First try to find by slug
+        const tenant = await this.prisma.tenant.findFirst({
+            where: {
+                OR: [
+                    { slug: slugOrId },
+                    { id: slugOrId },
+                ],
+            },
+            select: { id: true },
+        });
+
+        if (!tenant) {
+            throw new NotFoundException(`Tenant not found: ${slugOrId}`);
+        }
+
+        return tenant.id;
+    }
+
+    /**
      * Get tenant email settings
      */
-    async getSettings(tenantId: string) {
+    async getSettings(slugOrId: string) {
+        const tenantId = await this.resolveTenantId(slugOrId);
         return this.prisma.tenantEmailSettings.findUnique({
             where: { tenantId },
         });
@@ -85,7 +108,7 @@ export class TenantEmailService {
     /**
      * Create or update tenant email settings
      */
-    async upsertSettings(tenantId: string, data: {
+    async upsertSettings(slugOrId: string, data: {
         smtpHost?: string;
         smtpPort?: number;
         smtpUser?: string;
@@ -97,6 +120,8 @@ export class TenantEmailService {
         requireEmailVerification?: boolean;
         blockTempEmails?: boolean;
     }) {
+        const tenantId = await this.resolveTenantId(slugOrId);
+
         // Clear transporter cache for this tenant
         this.transporterCache.delete(tenantId);
 
