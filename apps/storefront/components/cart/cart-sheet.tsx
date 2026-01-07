@@ -157,21 +157,22 @@ export function CartSheet({ tenantSlug }: CartSheetProps) {
                                     </Button>
                                 </a>
                             </SheetClose>
-                            <a href={`/${tenantSlug}/cart`} className="block">
-                                <Button variant="secondary" className="w-full">
-                                    View Full Cart
+                            <SheetClose asChild>
+                                <a href={`/${tenantSlug}/cart`} className="block">
+                                    <Button variant="secondary" className="w-full">
+                                        View Full Cart
+                                    </Button>
+                                </a>
+                            </SheetClose>
+                            <SheetClose asChild>
+                                <Button variant="outline" className="w-full">
+                                    Continue Shopping
                                 </Button>
-                            </a>
-                        </SheetClose>
-                        <SheetClose asChild>
-                            <Button variant="outline" className="w-full">
-                                Continue Shopping
-                            </Button>
-                        </SheetClose>
-                    </SheetFooter>
+                            </SheetClose>
+                        </SheetFooter>
                     </div>
                 )}
-        </SheetContent>
+            </SheetContent>
         </Sheet >
     );
 }
