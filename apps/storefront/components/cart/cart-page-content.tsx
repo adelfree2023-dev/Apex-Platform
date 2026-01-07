@@ -52,9 +52,9 @@ export function CartPageContent({ tenantSlug }: CartPageContentProps) {
                 </div>
 
                 {/* Items */}
-                {items.map((item) => (
+                {items.map((item, index) => (
                     <CartItemRow
-                        key={item.variantId}
+                        key={`${item.variantId}-${index}`}
                         item={item}
                         tenantSlug={tenantSlug}
                     />

@@ -150,25 +150,28 @@ export function CartSheet({ tenantSlug }: CartSheetProps) {
                             <span>{(totalPrice / 100).toFixed(2)} USD</span>
                         </div>
                         <SheetFooter className="flex-col gap-3 sm:flex-col sm:space-x-0">
-                            <Button className="w-full h-12 text-base shadow-xl bg-gradient-to-r from-primary to-primary/80">
-                                Checkout Now
-                            </Button>
                             <SheetClose asChild>
-                                <a href={`/${tenantSlug}/cart`} className="block">
-                                    <Button variant="secondary" className="w-full">
-                                        View Full Cart
+                                <a href={`/${tenantSlug}/checkout`} className="block w-full">
+                                    <Button className="w-full h-12 text-base shadow-xl bg-gradient-to-r from-primary to-primary/80">
+                                        Checkout Now
                                     </Button>
                                 </a>
                             </SheetClose>
-                            <SheetClose asChild>
-                                <Button variant="outline" className="w-full">
-                                    Continue Shopping
+                            <a href={`/${tenantSlug}/cart`} className="block">
+                                <Button variant="secondary" className="w-full">
+                                    View Full Cart
                                 </Button>
-                            </SheetClose>
-                        </SheetFooter>
+                            </a>
+                        </SheetClose>
+                        <SheetClose asChild>
+                            <Button variant="outline" className="w-full">
+                                Continue Shopping
+                            </Button>
+                        </SheetClose>
+                    </SheetFooter>
                     </div>
                 )}
-            </SheetContent>
-        </Sheet>
+        </SheetContent>
+        </Sheet >
     );
 }
