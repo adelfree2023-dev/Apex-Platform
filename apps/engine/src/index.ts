@@ -1,6 +1,7 @@
 import { bootstrap, EventBus } from '@vendure/core';
 import { config } from './vendure-config';
 import { initializeEmailListeners } from './plugins/manager-email-plugin';
+import { initializeSingleChannelCustomerListeners } from './plugins/single-channel-customer.plugin';
 import path from 'path';
 import fs from 'fs';
 
@@ -25,6 +26,9 @@ bootstrap(config)
         // Initialize email event listeners
         const eventBus = app.get(EventBus);
         initializeEmailListeners(eventBus);
+
+        // Initialize customer isolation (single-channel per customer)
+        await initializeSingleChannelCustomerListeners(app);
     })
     .catch((err: Error) => {
         console.error('Failed to start Vendure:', err);
