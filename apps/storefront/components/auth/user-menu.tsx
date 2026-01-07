@@ -27,7 +27,8 @@ export function UserMenu({ tenantSlug }: UserMenuProps) {
         logout();
         // Clear local cart state (server cart stays for when user logs back in)
         resetLocalState();
-        router.refresh();
+        // Use window.location instead of router.refresh() to avoid Server Action cache issues
+        window.location.href = `/${tenantSlug}`;
     };
 
     // Not authenticated - show login link

@@ -108,8 +108,8 @@ export function AccountDashboard({ tenantSlug, channelToken }: AccountDashboardP
         // Cart stays on server for when user logs back in
         logout();
         resetLocalState();
-        router.push(`/${tenantSlug}`);
-        router.refresh();
+        // Use window.location instead of router to avoid Server Action cache issues
+        window.location.href = `/${tenantSlug}`;
     };
 
     // Loading state
