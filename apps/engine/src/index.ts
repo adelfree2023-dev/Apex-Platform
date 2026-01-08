@@ -1,3 +1,7 @@
+// IMPORTANT: Sentry must be imported FIRST before any other imports
+import './instrument';
+import { Sentry } from './instrument';
+
 import { bootstrap, EventBus } from '@vendure/core';
 import { config } from './vendure-config';
 import { initializeEmailListeners } from './plugins/manager-email-plugin';
@@ -31,6 +35,9 @@ bootstrap(config)
         await initializeSingleChannelCustomerListeners(app);
     })
     .catch((err: Error) => {
+        // Send error to Sentry
+        Sentry.captureException(err);
         console.error('Failed to start Vendure:', err);
         process.exit(1);
     });
+
