@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { CustomerAddress } from "@/lib/vendure-checkout";
-import { MapPin, Plus } from "lucide-react";
 
 interface AddressSelectorProps {
     addresses: CustomerAddress[];
@@ -26,11 +18,14 @@ export function AddressSelector({
 }: AddressSelectorProps) {
     const [value, setValue] = useState(selectedAddressId || "");
 
-    const handleValueChange = (newValue: string) => {
+    const handleValueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newValue = e.target.value;
         setValue(newValue);
 
         if (newValue === "new") {
             onSelect(null); // Signal to show new address form
+        } else if (newValue === "") {
+            onSelect(null);
         } else {
             const selected = addresses.find((a) => a.id === newValue);
             onSelect(selected || null);
@@ -41,42 +36,25 @@ export function AddressSelector({
         return null; // No saved addresses
     }
 
-    // Find default shipping address
-    const defaultAddress = addresses.find((a) => a.defaultShippingAddress);
-
     return (
         <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
                 Saved Addresses
             </label>
-            <Select value={value} onValueChange={handleValueChange}>
-                <SelectTrigger className="w-full">
-                    <SelectValue placeholder={placeholder} />
-                </SelectTrigger>
-                <SelectContent>
-                    {addresses.map((address) => (
-                        <SelectItem key={address.id} value={address.id}>
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-gray-400" />
-                                <span>
-                                    {address.fullName} - {address.streetLine1}, {address.city}
-                                </span>
-                                {address.defaultShippingAddress && (
-                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                        Default
-                                    </span>
-                                )}
-                            </div>
-                        </SelectItem>
-                    ))}
-                    <SelectItem value="new">
-                        <div className="flex items-center gap-2 text-primary">
-                            <Plus className="h-4 w-4" />
-                            <span>Use a new address</span>
-                        </div>
-                    </SelectItem>
-                </SelectContent>
-            </Select>
+            <select
+                value={value}
+                onChange={handleValueChange}
+                className="w-full h-10 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+            >
+                <option value="">{placeholder}</option>
+                {addresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                        {address.fullName} - {address.streetLine1}, {address.city}
+                        {address.defaultShippingAddress ? " (Default)" : ""}
+                    </option>
+                ))}
+                <option value="new">+ Use a new address</option>
+            </select>
         </div>
     );
 }
