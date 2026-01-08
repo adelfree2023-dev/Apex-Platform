@@ -35,7 +35,8 @@ export const config: VendureConfig = {
                 name: 'phoneNumber',
                 type: 'string',
                 label: [{ languageCode: LanguageCode.en, value: 'Phone Number' }],
-                nullable: false,
+                nullable: true, // Changed to true for existing customers
+                defaultValue: '',
                 public: true,
             },
             {
