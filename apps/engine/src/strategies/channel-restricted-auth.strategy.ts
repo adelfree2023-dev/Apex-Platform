@@ -53,13 +53,13 @@ export class ChannelRestrictedAuthStrategy extends NativeAuthenticationStrategy 
         this.dbConnection = injector.get(TransactionalConnection);
     }
 
-    async authenticate(ctx: RequestContext, data: ChannelRestrictedAuthData): Promise<User | false | string> {
+    async authenticate(ctx: RequestContext, data: ChannelRestrictedAuthData): Promise<User | false> {
         // 1. Use parent's authenticate for password verification
         const result = await super.authenticate(ctx, data);
 
         // If parent auth failed, return the result
         if (!result || typeof result === 'string') {
-            return result;
+            return false;
         }
 
         const user = result as User;
@@ -88,7 +88,7 @@ export class ChannelRestrictedAuthStrategy extends NativeAuthenticationStrategy 
         if (!channelCheck || channelCheck.length === 0) {
             // Customer NOT registered in this channel - REJECT LOGIN
             console.log(`[ChannelRestrictedAuth] 🚫 BLOCKED: Customer ${customerId} (${data.username}) tried to login to channel ${currentChannelId} but is not registered there.`);
-            return 'You are not registered in this store. Please register first.';
+            return false;  // Return false like NativeAuthenticationStrategy expects
         }
 
         // 4. Customer is in channel - allow login
