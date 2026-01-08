@@ -3,9 +3,11 @@ import {
     DefaultJobQueuePlugin,
     DefaultSearchPlugin,
     LanguageCode,
+    NativeAuthenticationStrategy,
 } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
+import { ChannelRestrictedAuthStrategy } from './strategies/channel-restricted-auth.strategy';
 import path from 'path';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -28,6 +30,14 @@ export const config: VendureConfig = {
         cookieOptions: {
             secret: process.env.COOKIE_SECRET || 'change-me-in-production',
         },
+        // Use ChannelRestrictedAuthStrategy for Shop API to enforce channel isolation
+        shopAuthenticationStrategy: [
+            new ChannelRestrictedAuthStrategy(),
+        ],
+        // Admin can use native auth (no channel restriction)
+        adminAuthenticationStrategy: [
+            new NativeAuthenticationStrategy(),
+        ],
     },
     customFields: {
         // NOTE: phoneNumber is now a built-in field in Vendure 2.x Customer entity
