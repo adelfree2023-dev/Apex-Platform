@@ -112,7 +112,8 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
 
                 // Auto-login after registration (no verification required)
                 const loginResult = await login(
-                    { email: formData.email, password: formData.password },
+                    formData.email,
+                    formData.password,
                     channelToken
                 );
 
