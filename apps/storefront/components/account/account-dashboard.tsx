@@ -85,7 +85,7 @@ export function AccountDashboard({ tenantSlug, channelToken }: AccountDashboardP
         };
 
         fetchCustomer();
-    }, [tenantSlug, channelToken, setUser]);
+    }, [tenantSlug, channelToken, setUser, logout]);
 
     const handleLogout = async () => {
         try {

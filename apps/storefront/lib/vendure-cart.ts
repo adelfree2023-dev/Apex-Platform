@@ -183,6 +183,30 @@ const ADJUST_ORDER_LINE = `
     ${ORDER_FRAGMENT}
 `;
 
+// Mutation to bind guest cart to a registered customer
+const SET_CUSTOMER_FOR_ORDER = `
+    mutation SetCustomerForOrder($input: CreateCustomerInput!) {
+        setCustomerForOrder(input: $input) {
+            ... on Order {
+                ...OrderFields
+            }
+            ... on AlreadyLoggedInError {
+                errorCode
+                message
+            }
+            ... on EmailAddressConflictError {
+                errorCode
+                message
+            }
+            ... on NoActiveOrderError {
+                errorCode
+                message
+            }
+        }
+    }
+    ${ORDER_FRAGMENT}
+`;
+
 // =============================================================================
 // API Functions
 // =============================================================================
@@ -362,6 +386,54 @@ export async function clearCart(channelToken: string): Promise<CartOperationResu
     // Get updated empty cart
     const emptyCart = await getCart(channelToken);
     return { success: true, order: emptyCart || undefined };
+}
+
+/**
+ * Bind a guest cart to a newly registered customer
+ * This is called after registration to transfer the guest cart to the new user
+ */
+export async function bindCartToCustomer(
+    channelToken: string,
+    customerData: {
+        emailAddress: string;
+        firstName: string;
+        lastName: string;
+    }
+): Promise<CartOperationResult> {
+    try {
+        const data = await vendureRequest<{
+            setCustomerForOrder: VendureOrder | { errorCode: string; message: string };
+        }>(channelToken, SET_CUSTOMER_FOR_ORDER, {
+            input: customerData,
+        });
+
+        const result = data.setCustomerForOrder;
+
+        if ("errorCode" in result) {
+            // AlreadyLoggedInError is OK - user is logged in, cart is already theirs
+            if (result.errorCode === "ALREADY_LOGGED_IN_ERROR") {
+                const currentCart = await getCart(channelToken);
+                return { success: true, order: currentCart || undefined };
+            }
+            // NoActiveOrderError means no cart to bind - also OK
+            if (result.errorCode === "NO_ACTIVE_ORDER_ERROR") {
+                return { success: true };
+            }
+            return {
+                success: false,
+                errorCode: result.errorCode,
+                message: result.message,
+            };
+        }
+
+        return { success: true, order: result };
+    } catch (error) {
+        console.error("Failed to bind cart to customer:", error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to bind cart",
+        };
+    }
 }
 
 // =============================================================================

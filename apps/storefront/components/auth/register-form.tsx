@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
+import { bindCartToCustomer } from "@/lib/vendure-cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,14 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
         );
 
         if (result) {
+            // Bind any guest cart to the newly registered customer
+            // This transfers products added before registration to the new account
+            await bindCartToCustomer(channelToken, {
+                emailAddress: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+            });
+
             setSuccess(true);
             // Redirect to account page after short delay
             setTimeout(() => {
