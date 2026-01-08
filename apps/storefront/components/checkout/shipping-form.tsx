@@ -1,20 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ShippingData } from "./checkout-content";
+import { AddressSelector } from "./address-selector";
+import {
+    getActiveCustomer,
+    type ActiveCustomer,
+    type CustomerAddress
+} from "@/lib/vendure-checkout";
 
 interface ShippingFormProps {
     initialData: ShippingData | null;
-    onSubmit: (data: ShippingData) => void;
+    onSubmit: (data: ShippingData, saveAddress: boolean) => void;
     tenantSlug: string;
+    channelToken: string;
 }
 
-export function ShippingForm({ initialData, onSubmit, tenantSlug }: ShippingFormProps) {
+export function ShippingForm({
+    initialData,
+    onSubmit,
+    tenantSlug,
+    channelToken
+}: ShippingFormProps) {
+    const [customer, setCustomer] = useState<ActiveCustomer | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [saveAddress, setSaveAddress] = useState(false);
+    const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+
     const [formData, setFormData] = useState<ShippingData>(
         initialData || {
             fullName: "",
@@ -28,6 +46,70 @@ export function ShippingForm({ initialData, onSubmit, tenantSlug }: ShippingForm
     );
 
     const [errors, setErrors] = useState<Partial<ShippingData>>({});
+
+    // Fetch customer data on mount
+    useEffect(() => {
+        async function fetchCustomer() {
+            setLoading(true);
+            try {
+                const activeCustomer = await getActiveCustomer(channelToken);
+                setCustomer(activeCustomer);
+
+                // Pre-fill form with customer data if logged in
+                if (activeCustomer && !initialData) {
+                    setFormData(prev => ({
+                        ...prev,
+                        fullName: `${activeCustomer.firstName} ${activeCustomer.lastName}`.trim(),
+                        email: activeCustomer.emailAddress,
+                        phone: activeCustomer.phoneNumber || prev.phone,
+                    }));
+
+                    // If customer has saved addresses, show selector
+                    if (activeCustomer.addresses.length > 0) {
+                        setShowNewAddressForm(false);
+                    } else {
+                        setShowNewAddressForm(true);
+                    }
+                } else {
+                    setShowNewAddressForm(true);
+                }
+            } catch (error) {
+                console.error("Failed to fetch customer:", error);
+                setShowNewAddressForm(true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchCustomer();
+    }, [channelToken, initialData]);
+
+    // Handle saved address selection
+    const handleAddressSelect = (address: CustomerAddress | null) => {
+        if (address) {
+            setFormData(prev => ({
+                ...prev,
+                fullName: address.fullName,
+                phone: address.phoneNumber || prev.phone,
+                address: [address.streetLine1, address.streetLine2].filter(Boolean).join(", "),
+                city: address.city,
+                postalCode: address.postalCode,
+                country: address.country.name,
+            }));
+            setShowNewAddressForm(false);
+        } else {
+            // User wants new address
+            setShowNewAddressForm(true);
+            setFormData(prev => ({
+                ...prev,
+                fullName: customer ? `${customer.firstName} ${customer.lastName}`.trim() : "",
+                address: "",
+                city: "",
+                postalCode: "",
+                country: "",
+            }));
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -57,14 +139,31 @@ export function ShippingForm({ initialData, onSubmit, tenantSlug }: ShippingForm
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (validate()) {
-            onSubmit(formData);
+            onSubmit(formData, saveAddress);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-white rounded-2xl border p-6 space-y-6">
                 <h2 className="text-xl font-semibold">Shipping Information</h2>
+
+                {/* Saved Addresses Selector (if logged in with addresses) */}
+                {customer && customer.addresses.length > 0 && (
+                    <AddressSelector
+                        addresses={customer.addresses}
+                        onSelect={handleAddressSelect}
+                        placeholder="Choose a saved address"
+                    />
+                )}
 
                 {/* Full Name */}
                 <div className="space-y-2">
@@ -92,6 +191,7 @@ export function ShippingForm({ initialData, onSubmit, tenantSlug }: ShippingForm
                             onChange={handleChange}
                             placeholder="john@example.com"
                             className={errors.email ? "border-red-500" : ""}
+                            disabled={!!customer} // Disable if logged in
                         />
                         {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                     </div>
@@ -109,59 +209,99 @@ export function ShippingForm({ initialData, onSubmit, tenantSlug }: ShippingForm
                     </div>
                 </div>
 
-                {/* Address */}
-                <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
-                    <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="123 Main St, Apt 4"
-                        className={errors.address ? "border-red-500" : ""}
-                    />
-                    {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
-                </div>
+                {/* Address - Show form inputs */}
+                {showNewAddressForm && (
+                    <>
+                        {/* Address */}
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Address *</Label>
+                            <Input
+                                id="address"
+                                name="address"
+                                value={formData.address}
+                                onChange={handleChange}
+                                placeholder="123 Main St, Apt 4"
+                                className={errors.address ? "border-red-500" : ""}
+                            />
+                            {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
+                        </div>
 
-                {/* City, Postal, Country */}
-                <div className="grid md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="city">City *</Label>
-                        <Input
-                            id="city"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleChange}
-                            placeholder="New York"
-                            className={errors.city ? "border-red-500" : ""}
-                        />
-                        {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+                        {/* City, Postal, Country */}
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="city">City *</Label>
+                                <Input
+                                    id="city"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                    placeholder="New York"
+                                    className={errors.city ? "border-red-500" : ""}
+                                />
+                                {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="postalCode">Postal Code *</Label>
+                                <Input
+                                    id="postalCode"
+                                    name="postalCode"
+                                    value={formData.postalCode}
+                                    onChange={handleChange}
+                                    placeholder="10001"
+                                    className={errors.postalCode ? "border-red-500" : ""}
+                                />
+                                {errors.postalCode && <p className="text-sm text-red-500">{errors.postalCode}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="country">Country *</Label>
+                                <Input
+                                    id="country"
+                                    name="country"
+                                    value={formData.country}
+                                    onChange={handleChange}
+                                    placeholder="United States"
+                                    className={errors.country ? "border-red-500" : ""}
+                                />
+                                {errors.country && <p className="text-sm text-red-500">{errors.country}</p>}
+                            </div>
+                        </div>
+
+                        {/* Save Address Checkbox (only for logged-in users) */}
+                        {customer && (
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="saveAddress"
+                                    checked={saveAddress}
+                                    onCheckedChange={(checked) => setSaveAddress(checked === true)}
+                                />
+                                <Label htmlFor="saveAddress" className="text-sm font-normal cursor-pointer">
+                                    Save this address for future orders
+                                </Label>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Show summary if using saved address */}
+                {!showNewAddressForm && formData.address && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Shipping to:</p>
+                        <p className="font-medium">{formData.fullName}</p>
+                        <p className="text-sm text-gray-700">{formData.address}</p>
+                        <p className="text-sm text-gray-700">
+                            {formData.city}, {formData.postalCode}
+                        </p>
+                        <p className="text-sm text-gray-700">{formData.country}</p>
+                        <Button
+                            type="button"
+                            variant="link"
+                            className="p-0 h-auto text-sm"
+                            onClick={() => setShowNewAddressForm(true)}
+                        >
+                            Edit address
+                        </Button>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="postalCode">Postal Code *</Label>
-                        <Input
-                            id="postalCode"
-                            name="postalCode"
-                            value={formData.postalCode}
-                            onChange={handleChange}
-                            placeholder="10001"
-                            className={errors.postalCode ? "border-red-500" : ""}
-                        />
-                        {errors.postalCode && <p className="text-sm text-red-500">{errors.postalCode}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="country">Country *</Label>
-                        <Input
-                            id="country"
-                            name="country"
-                            value={formData.country}
-                            onChange={handleChange}
-                            placeholder="United States"
-                            className={errors.country ? "border-red-500" : ""}
-                        />
-                        {errors.country && <p className="text-sm text-red-500">{errors.country}</p>}
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Actions */}

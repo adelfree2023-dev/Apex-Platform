@@ -12,10 +12,13 @@ export default async function CheckoutPage({
     const tenant = await getTenantBySlug(tenantSlug);
     if (!tenant) notFound();
 
+    // Use channelToken if available, fallback to slug
+    const channelToken = tenant.channelToken || tenantSlug;
+
     return (
         <div className="animate-fade-in">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
-            <CheckoutContent tenantSlug={tenantSlug} />
+            <CheckoutContent tenantSlug={tenantSlug} channelToken={channelToken} />
         </div>
     );
 }

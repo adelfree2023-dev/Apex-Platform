@@ -12,6 +12,7 @@ import Link from "next/link";
 
 interface CheckoutContentProps {
     tenantSlug: string;
+    channelToken: string;
 }
 
 export interface ShippingData {
@@ -31,7 +32,7 @@ export interface PaymentData {
     cardCvc?: string;
 }
 
-export function CheckoutContent({ tenantSlug }: CheckoutContentProps) {
+export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentProps) {
     const { items, totalItems, totalPrice, clearCart, isLoading } = useCartStore(tenantSlug);
 
     const [step, setStep] = useState(1);
@@ -94,8 +95,9 @@ export function CheckoutContent({ tenantSlug }: CheckoutContentProps) {
         );
     }
 
-    const handleShippingSubmit = (data: ShippingData) => {
+    const handleShippingSubmit = (data: ShippingData, saveAddress: boolean) => {
         setShippingData(data);
+        // TODO: If saveAddress is true, call createCustomerAddress
         setStep(2);
     };
 
@@ -136,6 +138,7 @@ export function CheckoutContent({ tenantSlug }: CheckoutContentProps) {
                         initialData={shippingData}
                         onSubmit={handleShippingSubmit}
                         tenantSlug={tenantSlug}
+                        channelToken={channelToken}
                     />
                 )}
 
