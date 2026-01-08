@@ -24,6 +24,107 @@ const GOVERNORATES = [
     'شمال سيناء', 'سوهاج'
 ];
 
+// Payment Methods Configuration
+const PAYMENT_METHODS = [
+    { id: "cod", name: "الدفع عند الاستلام", icon: "💵", description: "ادفع نقداً عند الاستلام", enabled: true },
+    { id: "card", name: "بطاقة ائتمان", icon: "💳", description: "Visa, Mastercard", enabled: false, badge: "قريباً" },
+    { id: "instapay", name: "InstaPay", icon: "📱", description: "التحويل الفوري", enabled: false, badge: "قريباً" },
+    { id: "vodafone", name: "فودافون كاش", icon: "🔴", description: "محفظة فودافون", enabled: false, badge: "قريباً" },
+    { id: "fawry", name: "فوري", icon: "🟡", description: "ادفع في أي فرع فوري", enabled: false, badge: "قريباً" },
+    { id: "valu", name: "ValU تقسيط", icon: "🔵", description: "قسّط على 12 شهر", enabled: false, badge: "قريباً" },
+];
+
+// Payment Method Selector Component
+function PaymentMethodSelector({
+    selectedMethod,
+    onSelect
+}: {
+    selectedMethod: string;
+    onSelect: (method: "cod" | "card") => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const selected = PAYMENT_METHODS.find(m => m.id === selectedMethod) || PAYMENT_METHODS[0];
+
+    return (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <h2 className="text-lg font-semibold">طريقة الدفع</h2>
+            </div>
+
+            {/* Custom Dropdown */}
+            <div className="relative">
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-full h-14 px-4 rounded-xl border-2 border-gray-200 bg-white flex items-center justify-between hover:border-primary/50 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">{selected.icon}</span>
+                        <div className="text-right">
+                            <p className="font-medium">{selected.name}</p>
+                            <p className="text-xs text-gray-500">{selected.description}</p>
+                        </div>
+                    </div>
+                    <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {isOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto">
+                            {PAYMENT_METHODS.map((method) => (
+                                <button
+                                    key={method.id}
+                                    type="button"
+                                    disabled={!method.enabled}
+                                    onClick={() => {
+                                        if (method.enabled) {
+                                            onSelect(method.id as "cod" | "card");
+                                            setIsOpen(false);
+                                        }
+                                    }}
+                                    className={`w-full px-4 py-3 flex items-center gap-3 text-right transition-colors ${method.enabled
+                                            ? 'hover:bg-gray-50 cursor-pointer'
+                                            : 'opacity-50 cursor-not-allowed bg-gray-50'
+                                        } ${selectedMethod === method.id ? 'bg-primary/5 border-r-4 border-primary' : ''}`}
+                                >
+                                    <span className="text-2xl">{method.icon}</span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-medium">{method.name}</p>
+                                            {method.badge && (
+                                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                                                    {method.badge}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-500">{method.description}</p>
+                                    </div>
+                                    {selectedMethod === method.id && (
+                                        <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 interface CartItem {
     id: string;
     name: string;
@@ -378,50 +479,11 @@ export function QuickCheckoutForm({
                         </div>
                     </div>
 
-                    {/* Payment Methods */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <CreditCard className="h-5 w-5 text-primary" />
-                            </div>
-                            <h2 className="text-lg font-semibold">طريقة الدفع</h2>
-                        </div>
-
-                        <RadioGroup
-                            value={formData.paymentMethod}
-                            onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "cod" | "card" }))}
-                            className="space-y-4"
-                        >
-                            <label
-                                htmlFor="cod"
-                                className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.paymentMethod === "cod"
-                                        ? "border-primary bg-primary/5"
-                                        : "border-gray-200 hover:border-gray-300"
-                                    }`}
-                            >
-                                <RadioGroupItem value="cod" id="cod" />
-                                <div className="flex-1">
-                                    <div className="font-medium flex items-center gap-2">
-                                        💵 الدفع عند الاستلام
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-1">ادفع نقداً للمندوب عند استلام الطلب</p>
-                                </div>
-                            </label>
-                            <label
-                                htmlFor="card"
-                                className="flex items-center gap-4 p-4 border-2 rounded-xl cursor-not-allowed opacity-50 border-gray-200"
-                            >
-                                <RadioGroupItem value="card" id="card" disabled />
-                                <div className="flex-1">
-                                    <div className="font-medium flex items-center gap-2">
-                                        💳 بطاقة ائتمان
-                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">قريباً</span>
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-1">Visa, Mastercard</p>
-                                </div>
-                            </label>
-                        </RadioGroup>
-                    </div>
+                    {/* Payment Methods - Compact Dropdown */}
+                    <PaymentMethodSelector
+                        selectedMethod={formData.paymentMethod}
+                        onSelect={(method) => setFormData(prev => ({ ...prev, paymentMethod: method }))}
+                    />
                 </div>
 
                 {/* Right Column - Order Summary (30-40%, Sticky) */}
