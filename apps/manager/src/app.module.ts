@@ -9,6 +9,9 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { EmailModule } from './email/email.module';
+import { StripeModule } from './stripe/stripe.module';
+import { BillingModule } from './billing/billing.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
     imports: [
@@ -34,6 +37,11 @@ import { EmailModule } from './email/email.module';
         AuthModule,
         UsersModule,
         EmailModule,
+
+        // Payment & Billing modules
+        StripeModule,
+        BillingModule,
+        PaymentsModule,
     ],
     providers: [
         {
@@ -43,4 +51,5 @@ import { EmailModule } from './email/email.module';
     ],
 })
 export class AppModule { }
+
 

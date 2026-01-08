@@ -54,6 +54,30 @@ enum EmailType {
   ORDER_CANCELLED
 }
 
+/// Subscription plan types
+enum PlanType {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+/// Subscription status (synced with Stripe)
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+}
+
+/// Payment status
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -76,10 +100,15 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  license       License?
-  users         TenantUser[]
-  emailSettings TenantEmailSettings?
-  emailTemplates EmailTemplate[]
+  license          License?
+  users            TenantUser[]
+  emailSettings    TenantEmailSettings?
+  emailTemplates   EmailTemplate[]
+  
+  // Payment Relations (Per-Tenant Isolation)
+  paymentSettings  TenantPaymentSettings?
+  subscription     Subscription?
+  payments         Payment[]
 
   @@map("tenants")
 }
@@ -287,3 +316,161 @@ model EmailLog {
   @@index([createdAt])
   @@map("email_logs")
 }
+
+// ============================================
+// PAYMENT SYSTEM (Per-Tenant Isolation)
+// ============================================
+
+/// Payment methods available
+enum PaymentMethodType {
+  VISA_MASTERCARD   // Credit/Debit cards
+  INSTAPAY          // Egypt InstaPay
+  VODAFONE_CASH     // Vodafone Cash
+  ORANGE_CASH       // Orange Cash
+  ETISALAT_CASH     // Etisalat Cash
+  FAWRY             // Fawry payments
+  BANK_TRANSFER     // Direct bank transfer
+  CASH_ON_DELIVERY  // COD
+}
+
+/// Payment settings per tenant (COMPLETE ISOLATION)
+model TenantPaymentSettings {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // ============ Card Payments (Visa/Mastercard) ============
+  cardEnabled       Boolean @default(false)
+  cardProvider      String? // "stripe", "paymob", "fawry_cards"
+  cardApiKey        String? // Encrypted
+  cardSecretKey     String? // Encrypted
+  cardWebhookSecret String? // Encrypted
+  
+  // ============ InstaPay ============
+  instapayEnabled   Boolean @default(false)
+  instapayAccount   String? // Account number/username
+  instapayApiKey    String? // If API available
+  
+  // ============ E-Wallets ============
+  vodafoneCashEnabled  Boolean @default(false)
+  vodafoneCashNumber   String? // Wallet number
+  
+  orangeCashEnabled    Boolean @default(false)
+  orangeCashNumber     String?
+  
+  etisalatCashEnabled  Boolean @default(false)
+  etisalatCashNumber   String?
+  
+  // ============ Fawry ============
+  fawryEnabled      Boolean @default(false)
+  fawryMerchantId   String? // Encrypted
+  fawrySecretKey    String? // Encrypted
+  
+  // ============ Bank Transfer ============
+  bankTransferEnabled  Boolean @default(false)
+  bankName             String?
+  bankAccountName      String?
+  bankAccountNumber    String? // Encrypted
+  bankIban             String? // Encrypted
+  
+  // ============ Cash on Delivery ============
+  codEnabled           Boolean @default(true) // Usually enabled by default
+  codExtraFee          Int      @default(0)   // Extra fee in cents
+  
+  // ============ General Settings ============
+  defaultCurrency      String   @default("EGP")
+  testMode             Boolean  @default(true) // Test mode for development
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tenant_payment_settings")
+}
+
+/// Subscription (for SaaS billing - Super Admin collects from Tenants)
+model Subscription {
+  id                   String             @id @default(cuid())
+  tenantId             String             @unique
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Stripe Integration (for SaaS billing)
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  stripeCustomerId     String?
+  
+  // Plan Details
+  plan                 PlanType           @default(BASIC)
+  status               SubscriptionStatus @default(TRIALING)
+  
+  // Billing Cycle
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  
+  // Timestamps
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([stripeSubscriptionId])
+  @@index([stripeCustomerId])
+  @@map("subscriptions")
+}
+
+/// Payments (both customer payments and SaaS billing)
+model Payment {
+  id                    String        @id @default(cuid())
+  tenantId              String
+  tenant                Tenant        @relation(fields: [tenantId], references: [id])
+  
+  // Payment Details
+  amount                Int           // Amount in smallest currency unit (cents/piastres)
+  currency              String        @default("EGP")
+  status                PaymentStatus @default(PENDING)
+  method                PaymentMethodType?
+  
+  // External References
+  externalPaymentId     String?       @unique // ID from payment provider
+  externalInvoiceId     String?
+  
+  // Order Reference (for customer payments)
+  orderId               String?       // Vendure Order ID
+  orderCode             String?       // Vendure Order Code
+  
+  // Metadata
+  metadata              Json?
+  failureReason         String?
+  
+  // Timestamps
+  createdAt             DateTime      @default(now())
+  paidAt                DateTime?
+
+  @@index([tenantId])
+  @@index([externalPaymentId])
+  @@index([orderId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// Webhook event tracking (IDEMPOTENCY - Prevents double processing)
+model ProcessedWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique  // External event ID (e.g., Stripe event.id)
+  eventType   String             // e.g., "payment_intent.succeeded"
+  provider    String             // "stripe", "paymob", "fawry"
+  tenantId    String?            // If tenant-specific
+  
+  // Event Data (for debugging)
+  data        Json?
+  
+  // Timestamps
+  processedAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([provider])
+  @@index([tenantId])
+  @@map("processed_webhook_events")
+}
+
