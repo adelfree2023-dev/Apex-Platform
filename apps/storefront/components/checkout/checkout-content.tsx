@@ -7,8 +7,16 @@ import { ShippingForm } from "./shipping-form";
 import { PaymentForm } from "./payment-form";
 import { OrderReview } from "./order-review";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingBag, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import {
+    setOrderShippingAddress,
+    setOrderBillingAddress,
+    setOrderShippingMethod,
+    transitionOrderToState,
+    getEligibleShippingMethods,
+    createCustomerAddress,
+} from "@/lib/vendure-checkout";
 
 interface CheckoutContentProps {
     tenantSlug: string;
@@ -32,8 +40,72 @@ export interface PaymentData {
     cardCvc?: string;
 }
 
+// Add payment mutation
+const ADD_PAYMENT_MUTATION = `
+    mutation AddPaymentToOrder($input: PaymentInput!) {
+        addPaymentToOrder(input: $input) {
+            ... on Order {
+                id
+                code
+                state
+            }
+            ... on PaymentFailedError {
+                errorCode
+                message
+            }
+            ... on PaymentDeclinedError {
+                errorCode
+                message
+            }
+            ... on OrderStateTransitionError {
+                errorCode
+                message
+            }
+            ... on NoActiveOrderError {
+                errorCode
+                message
+            }
+        }
+    }
+`;
+
+async function addPaymentToOrder(channelToken: string, method: string) {
+    const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || "http://127.0.0.1:3001/shop-api";
+
+    const response = await fetch(VENDURE_API, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "vendure-token": channelToken,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+            query: ADD_PAYMENT_MUTATION,
+            variables: {
+                input: {
+                    method: method,
+                    metadata: {}
+                }
+            }
+        }),
+    });
+
+    const result = await response.json();
+
+    if (result.errors) {
+        throw new Error(result.errors[0]?.message || "Payment failed");
+    }
+
+    const paymentResult = result.data?.addPaymentToOrder;
+    if (paymentResult?.errorCode) {
+        throw new Error(paymentResult.message || "Payment failed");
+    }
+
+    return paymentResult;
+}
+
 export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentProps) {
-    const { items, totalItems, totalPrice, clearCart, isLoading } = useCartStore(tenantSlug);
+    const { items, totalItems, totalPrice, refreshCart, isLoading } = useCartStore(tenantSlug);
 
     const [step, setStep] = useState(1);
     const [shippingData, setShippingData] = useState<ShippingData | null>(null);
@@ -41,6 +113,7 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
     const [isProcessing, setIsProcessing] = useState(false);
     const [orderComplete, setOrderComplete] = useState(false);
     const [orderId, setOrderId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Empty cart redirect
     if (items.length === 0 && !orderComplete) {
@@ -50,15 +123,15 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                     <ShoppingBag className="h-10 w-10 text-gray-400" />
                 </div>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Your cart is empty
+                    سلة التسوق فارغة
                 </h2>
                 <p className="text-gray-500 mb-8">
-                    Add some items to your cart before checking out.
+                    أضف بعض المنتجات قبل إتمام الشراء
                 </p>
                 <Button asChild size="lg">
                     <Link href={`/${tenantSlug}`}>
                         <ArrowLeft className="mr-2 h-5 w-5" />
-                        Continue Shopping
+                        متابعة التسوق
                     </Link>
                 </Button>
             </div>
@@ -75,30 +148,81 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                     </svg>
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    Order Placed Successfully!
+                    تم الطلب بنجاح! 🎉
                 </h2>
                 <p className="text-gray-500 mb-2">
-                    Thank you for your order.
+                    شكراً لك على طلبك
                 </p>
                 <p className="text-lg font-semibold text-primary mb-8">
-                    Order ID: {orderId}
+                    رقم الطلب: {orderId}
                 </p>
                 <p className="text-sm text-gray-500 mb-8">
-                    A confirmation email has been sent to {shippingData?.email}
+                    تم إرسال تأكيد إلى {shippingData?.email}
                 </p>
                 <Button asChild size="lg">
                     <Link href={`/${tenantSlug}`}>
-                        Continue Shopping
+                        متابعة التسوق
                     </Link>
                 </Button>
             </div>
         );
     }
 
-    const handleShippingSubmit = (data: ShippingData, saveAddress: boolean) => {
-        setShippingData(data);
-        // TODO: If saveAddress is true, call createCustomerAddress
-        setStep(2);
+    const handleShippingSubmit = async (data: ShippingData, saveAddress: boolean) => {
+        setError(null);
+        setIsProcessing(true);
+
+        try {
+            // 1. Set shipping address on order
+            const addressResult = await setOrderShippingAddress(channelToken, {
+                fullName: data.fullName,
+                streetLine1: data.address,
+                city: data.city,
+                postalCode: data.postalCode,
+                countryCode: "EG", // Default to Egypt
+                phoneNumber: data.phone,
+            });
+
+            if (!addressResult.success) {
+                throw new Error(addressResult.message || "فشل في تعيين العنوان");
+            }
+
+            // 2. Set billing address (same as shipping)
+            await setOrderBillingAddress(channelToken, {
+                fullName: data.fullName,
+                streetLine1: data.address,
+                city: data.city,
+                postalCode: data.postalCode,
+                countryCode: "EG",
+                phoneNumber: data.phone,
+            });
+
+            // 3. Get and set shipping method
+            const shippingMethods = await getEligibleShippingMethods(channelToken);
+            if (shippingMethods.length > 0) {
+                await setOrderShippingMethod(channelToken, shippingMethods[0].id);
+            }
+
+            // 4. Optionally save address for customer
+            if (saveAddress) {
+                await createCustomerAddress(channelToken, {
+                    fullName: data.fullName,
+                    streetLine1: data.address,
+                    city: data.city,
+                    postalCode: data.postalCode,
+                    countryCode: "EG",
+                    phoneNumber: data.phone,
+                    defaultShippingAddress: true,
+                });
+            }
+
+            setShippingData(data);
+            setStep(2);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "حدث خطأ");
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handlePaymentSubmit = (data: PaymentData) => {
@@ -107,19 +231,40 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
     };
 
     const handlePlaceOrder = async () => {
+        setError(null);
         setIsProcessing(true);
 
-        // Simulate order processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // 1. Transition to ArrangingPayment state
+            const transitionResult = await transitionOrderToState(channelToken, "ArrangingPayment");
 
-        // Generate order ID
-        const newOrderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
-        setOrderId(newOrderId);
+            if (!transitionResult.success) {
+                throw new Error(transitionResult.message || "فشل في تحضير الطلب");
+            }
 
-        // Clear cart and show success
-        clearCart();
-        setOrderComplete(true);
-        setIsProcessing(false);
+            // 2. Add payment (COD or card)
+            const paymentMethod = paymentData?.method === "cod"
+                ? "manual" // Use manual payment method for COD
+                : "stripe"; // For card payments
+
+            const paymentResult = await addPaymentToOrder(channelToken, paymentMethod);
+
+            if (!paymentResult?.code) {
+                throw new Error("فشل في إتمام الدفع");
+            }
+
+            // 3. Success!
+            setOrderId(paymentResult.code);
+            setOrderComplete(true);
+
+            // 4. Refresh cart (it should be empty now)
+            await refreshCart();
+
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "حدث خطأ أثناء إتمام الطلب");
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handleBack = () => {
@@ -128,6 +273,17 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
 
     return (
         <div className="max-w-4xl mx-auto">
+            {/* Error Display */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-red-800 font-medium">حدث خطأ</p>
+                        <p className="text-red-600 text-sm">{error}</p>
+                    </div>
+                </div>
+            )}
+
             {/* Steps Indicator */}
             <CheckoutSteps currentStep={step} />
 
@@ -167,3 +323,4 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
         </div>
     );
 }
+
