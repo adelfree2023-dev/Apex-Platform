@@ -13,15 +13,12 @@
  */
 
 import {
-    AuthenticationStrategy,
     Injector,
     RequestContext,
     User,
     TransactionalConnection,
     NativeAuthenticationStrategy,
 } from '@vendure/core';
-import { DocumentNode } from 'graphql';
-import gql from 'graphql-tag';
 
 export interface ChannelRestrictedAuthData {
     username: string;
@@ -38,15 +35,6 @@ export const CHANNEL_RESTRICTED_AUTH_STRATEGY_NAME = 'native';
 export class ChannelRestrictedAuthStrategy extends NativeAuthenticationStrategy {
 
     private dbConnection!: TransactionalConnection;
-
-    defineInputType(): DocumentNode {
-        return gql`
-            input NativeAuthInput {
-                username: String!
-                password: String!
-            }
-        `;
-    }
 
     async init(injector: Injector) {
         await super.init(injector);

@@ -9,14 +9,13 @@
  * - Login: Block login if customer not registered in current channel
  */
 
-import { EventBus, TransactionalConnection, AccountRegistrationEvent, LoginEvent } from '@vendure/core';
-import { INestApplication } from '@nestjs/common';
+import { EventBus, TransactionalConnection, AccountRegistrationEvent, LoginEvent, VendureConfig } from '@vendure/core';
 
 /**
  * Initialize the SingleChannelCustomer event listeners
  * Call this from bootstrap() after Vendure starts
  */
-export async function initializeSingleChannelCustomerListeners(app: INestApplication): Promise<void> {
+export async function initializeSingleChannelCustomerListeners(app: { get: <T>(type: new (...args: any[]) => T) => T }): Promise<void> {
     const eventBus = app.get(EventBus);
     const connection = app.get(TransactionalConnection);
 
@@ -25,7 +24,7 @@ export async function initializeSingleChannelCustomerListeners(app: INestApplica
     // ================================
     // 1. REGISTRATION ISOLATION
     // ================================
-    eventBus.ofType(AccountRegistrationEvent).subscribe(async (event) => {
+    eventBus.ofType(AccountRegistrationEvent).subscribe(async (event: AccountRegistrationEvent) => {
         const ctx = event.ctx;
         const registrationChannelId = ctx.channelId;
         const userEmail = event.user?.identifier;
@@ -82,7 +81,7 @@ export async function initializeSingleChannelCustomerListeners(app: INestApplica
     // 2. LOGIN ISOLATION - CRITICAL!
     // Block login if customer not in current channel
     // ================================
-    eventBus.ofType(LoginEvent).subscribe(async (event) => {
+    eventBus.ofType(LoginEvent).subscribe(async (event: LoginEvent) => {
         const ctx = event.ctx;
         const currentChannelId = ctx.channelId;
         const userId = event.user?.id;
