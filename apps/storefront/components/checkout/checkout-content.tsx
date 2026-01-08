@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { useCartStore } from "@/lib/cart-store";
-import { CheckoutSteps } from "./checkout-steps";
-import { ShippingForm } from "./shipping-form";
-import { PaymentForm } from "./payment-form";
-import { OrderReview } from "./order-review";
+import { QuickCheckoutForm } from "./quick-checkout-form";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShoppingBag, AlertCircle } from "lucide-react";
+import { ArrowLeft, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import {
     setOrderShippingAddress,
@@ -15,7 +12,6 @@ import {
     setOrderShippingMethod,
     transitionOrderToState,
     getEligibleShippingMethods,
-    createCustomerAddress,
 } from "@/lib/vendure-checkout";
 
 interface CheckoutContentProps {
@@ -107,18 +103,16 @@ async function addPaymentToOrder(channelToken: string, method: string) {
 export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentProps) {
     const { items, totalItems, totalPrice, refreshCart, isLoading } = useCartStore(tenantSlug);
 
-    const [step, setStep] = useState(1);
-    const [shippingData, setShippingData] = useState<ShippingData | null>(null);
-    const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [orderComplete, setOrderComplete] = useState(false);
     const [orderId, setOrderId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [customerEmail, setCustomerEmail] = useState<string>("");
 
     // Empty cart redirect
     if (items.length === 0 && !orderComplete) {
         return (
-            <div className="text-center py-16">
+            <div className="text-center py-16" dir="rtl">
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-6">
                     <ShoppingBag className="h-10 w-10 text-gray-400" />
                 </div>
@@ -130,7 +124,7 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 </p>
                 <Button asChild size="lg">
                     <Link href={`/${tenantSlug}`}>
-                        <ArrowLeft className="mr-2 h-5 w-5" />
+                        <ArrowLeft className="ml-2 h-5 w-5" />
                         متابعة التسوق
                     </Link>
                 </Button>
@@ -141,11 +135,9 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
     // Order complete view
     if (orderComplete) {
         return (
-            <div className="text-center py-16">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-                    <svg className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+            <div className="text-center py-16" dir="rtl">
+                <div className="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6 animate-bounce">
+                    <CheckCircle2 className="h-12 w-12 text-green-600" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     تم الطلب بنجاح! 🎉
@@ -153,34 +145,43 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 <p className="text-gray-500 mb-2">
                     شكراً لك على طلبك
                 </p>
-                <p className="text-lg font-semibold text-primary mb-8">
-                    رقم الطلب: {orderId}
-                </p>
+                <div className="bg-primary/10 rounded-xl p-4 inline-block mb-6">
+                    <p className="text-sm text-gray-600 mb-1">رقم الطلب:</p>
+                    <p className="text-2xl font-bold text-primary">{orderId}</p>
+                </div>
                 <p className="text-sm text-gray-500 mb-8">
-                    تم إرسال تأكيد إلى {shippingData?.email}
+                    تم إرسال تأكيد إلى {customerEmail}
                 </p>
-                <Button asChild size="lg">
-                    <Link href={`/${tenantSlug}`}>
-                        متابعة التسوق
-                    </Link>
-                </Button>
+                <div className="space-y-3">
+                    <Button asChild size="lg" className="w-full max-w-xs">
+                        <Link href={`/${tenantSlug}`}>
+                            متابعة التسوق
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg" className="w-full max-w-xs">
+                        <Link href={`/${tenantSlug}/account/orders`}>
+                            تتبع طلباتي
+                        </Link>
+                    </Button>
+                </div>
             </div>
         );
     }
 
-    const handleShippingSubmit = async (data: ShippingData, saveAddress: boolean) => {
+    const handleQuickCheckout = async (shippingData: ShippingData, paymentData: PaymentData) => {
         setError(null);
         setIsProcessing(true);
+        setCustomerEmail(shippingData.email);
 
         try {
-            // 1. Set shipping address on order
+            // 1. Set shipping address
             const addressResult = await setOrderShippingAddress(channelToken, {
-                fullName: data.fullName,
-                streetLine1: data.address,
-                city: data.city,
-                postalCode: data.postalCode,
-                countryCode: "EG", // Default to Egypt
-                phoneNumber: data.phone,
+                fullName: shippingData.fullName,
+                streetLine1: shippingData.address,
+                city: shippingData.city,
+                postalCode: shippingData.postalCode,
+                countryCode: "EG",
+                phoneNumber: shippingData.phone,
             });
 
             if (!addressResult.success) {
@@ -189,75 +190,40 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
 
             // 2. Set billing address (same as shipping)
             await setOrderBillingAddress(channelToken, {
-                fullName: data.fullName,
-                streetLine1: data.address,
-                city: data.city,
-                postalCode: data.postalCode,
+                fullName: shippingData.fullName,
+                streetLine1: shippingData.address,
+                city: shippingData.city,
+                postalCode: shippingData.postalCode,
                 countryCode: "EG",
-                phoneNumber: data.phone,
+                phoneNumber: shippingData.phone,
             });
 
-            // 3. Get and set shipping method
+            // 3. Set shipping method
             const shippingMethods = await getEligibleShippingMethods(channelToken);
             if (shippingMethods.length > 0) {
                 await setOrderShippingMethod(channelToken, shippingMethods[0].id);
             }
 
-            // 4. Optionally save address for customer
-            if (saveAddress) {
-                await createCustomerAddress(channelToken, {
-                    fullName: data.fullName,
-                    streetLine1: data.address,
-                    city: data.city,
-                    postalCode: data.postalCode,
-                    countryCode: "EG",
-                    phoneNumber: data.phone,
-                    defaultShippingAddress: true,
-                });
-            }
-
-            setShippingData(data);
-            setStep(2);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "حدث خطأ");
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handlePaymentSubmit = (data: PaymentData) => {
-        setPaymentData(data);
-        setStep(3);
-    };
-
-    const handlePlaceOrder = async () => {
-        setError(null);
-        setIsProcessing(true);
-
-        try {
-            // 1. Transition to ArrangingPayment state
+            // 4. Transition to ArrangingPayment
             const transitionResult = await transitionOrderToState(channelToken, "ArrangingPayment");
 
             if (!transitionResult.success) {
                 throw new Error(transitionResult.message || "فشل في تحضير الطلب");
             }
 
-            // 2. Add payment (COD or card)
-            const paymentMethod = paymentData?.method === "cod"
-                ? "manual" // Use manual payment method for COD
-                : "stripe"; // For card payments
-
+            // 5. Add payment
+            const paymentMethod = paymentData.method === "cod" ? "manual" : "stripe";
             const paymentResult = await addPaymentToOrder(channelToken, paymentMethod);
 
             if (!paymentResult?.code) {
                 throw new Error("فشل في إتمام الدفع");
             }
 
-            // 3. Success!
+            // 6. Success!
             setOrderId(paymentResult.code);
             setOrderComplete(true);
 
-            // 4. Refresh cart (it should be empty now)
+            // 7. Refresh cart
             await refreshCart();
 
         } catch (err) {
@@ -267,15 +233,11 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
         }
     };
 
-    const handleBack = () => {
-        setStep(step - 1);
-    };
-
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-2xl mx-auto">
             {/* Error Display */}
             {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3" dir="rtl">
                     <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div>
                         <p className="text-red-800 font-medium">حدث خطأ</p>
@@ -284,43 +246,14 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 </div>
             )}
 
-            {/* Steps Indicator */}
-            <CheckoutSteps currentStep={step} />
-
-            <div className="mt-8">
-                {/* Step 1: Shipping */}
-                {step === 1 && (
-                    <ShippingForm
-                        initialData={shippingData}
-                        onSubmit={handleShippingSubmit}
-                        tenantSlug={tenantSlug}
-                        channelToken={channelToken}
-                    />
-                )}
-
-                {/* Step 2: Payment */}
-                {step === 2 && (
-                    <PaymentForm
-                        initialData={paymentData}
-                        onSubmit={handlePaymentSubmit}
-                        onBack={handleBack}
-                    />
-                )}
-
-                {/* Step 3: Review */}
-                {step === 3 && shippingData && paymentData && (
-                    <OrderReview
-                        items={items}
-                        shippingData={shippingData}
-                        paymentData={paymentData}
-                        subtotal={totalPrice}
-                        onPlaceOrder={handlePlaceOrder}
-                        onBack={handleBack}
-                        isProcessing={isProcessing}
-                    />
-                )}
-            </div>
+            {/* Quick Checkout Form - Single Step! */}
+            <QuickCheckoutForm
+                onSubmit={handleQuickCheckout}
+                isProcessing={isProcessing}
+                tenantSlug={tenantSlug}
+                channelToken={channelToken}
+                cartTotal={totalPrice}
+            />
         </div>
     );
 }
-
