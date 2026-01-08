@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, ArrowLeft, Loader2, MapPin, CreditCard, Truck } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, MapPin, CreditCard, Truck, ShoppingBag, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import type { ShippingData, PaymentData } from "./checkout-content";
 import {
@@ -24,12 +24,21 @@ const GOVERNORATES = [
     'شمال سيناء', 'سوهاج'
 ];
 
+interface CartItem {
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    image?: string;
+}
+
 interface QuickCheckoutFormProps {
     onSubmit: (shippingData: ShippingData, paymentData: PaymentData) => void;
     isProcessing: boolean;
     tenantSlug: string;
     channelToken: string;
     cartTotal: number;
+    cartItems?: CartItem[];
 }
 
 interface FormData {
@@ -51,7 +60,8 @@ export function QuickCheckoutForm({
     isProcessing,
     tenantSlug,
     channelToken,
-    cartTotal
+    cartTotal,
+    cartItems = []
 }: QuickCheckoutFormProps) {
     const [customer, setCustomer] = useState<ActiveCustomer | null>(null);
     const [loading, setLoading] = useState(true);
@@ -118,7 +128,6 @@ export function QuickCheckoutForm({
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
-                    // Use reverse geocoding (free API)
                     const response = await fetch(
                         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`
                     );
@@ -165,7 +174,6 @@ export function QuickCheckoutForm({
         e.preventDefault();
         if (!validate()) return;
 
-        // Build full address
         const addressParts = [
             formData.street,
             formData.building && `عمارة ${formData.building}`,
@@ -198,214 +206,304 @@ export function QuickCheckoutForm({
         );
     }
 
+    // Calculate totals
+    const subtotal = cartTotal;
+    const shipping = 0; // Free shipping
+    const total = subtotal + shipping;
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-6" dir="rtl">
-            {/* Shipping Section */}
-            <div className="bg-white rounded-2xl border p-6 space-y-5">
-                <div className="flex items-center gap-2 text-lg font-semibold">
-                    <Truck className="h-5 w-5 text-primary" />
-                    <h2>معلومات التوصيل</h2>
-                </div>
-
-                {/* Name & Phone - Same Row */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="fullName">الاسم بالكامل *</Label>
-                        <Input
-                            id="fullName"
-                            name="fullName"
-                            value={formData.fullName}
-                            onChange={handleChange}
-                            placeholder="محمد أحمد"
-                            className={errors.fullName ? "border-red-500" : ""}
-                        />
-                        {errors.fullName && <p className="text-sm text-red-500">{errors.fullName}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">رقم الهاتف *</Label>
-                        <Input
-                            id="phone"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            placeholder="01xxxxxxxxx"
-                            className={errors.phone ? "border-red-500" : ""}
-                        />
-                        {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
-                    </div>
-                </div>
-
-                {/* Location Button */}
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGetLocation}
-                    disabled={locationLoading}
-                    className="w-full"
-                >
-                    {locationLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                    ) : (
-                        <MapPin className="h-4 w-4 ml-2" />
-                    )}
-                    تحديد موقعي تلقائياً
-                </Button>
-
-                {/* Governorate & City - Same Row */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="governorate">المحافظة *</Label>
-                        <select
-                            id="governorate"
-                            name="governorate"
-                            value={formData.governorate}
-                            onChange={handleChange}
-                            className={`w-full h-10 px-3 rounded-md border ${errors.governorate ? "border-red-500" : "border-input"} bg-background`}
-                        >
-                            <option value="">اختر المحافظة</option>
-                            {GOVERNORATES.map(gov => (
-                                <option key={gov} value={gov}>{gov}</option>
-                            ))}
-                        </select>
-                        {errors.governorate && <p className="text-sm text-red-500">{errors.governorate}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="city">المدينة / المنطقة</Label>
-                        <Input
-                            id="city"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleChange}
-                            placeholder="مدينة نصر"
-                        />
-                    </div>
-                </div>
-
-                {/* Street */}
-                <div className="space-y-2">
-                    <Label htmlFor="street">الشارع *</Label>
-                    <Input
-                        id="street"
-                        name="street"
-                        value={formData.street}
-                        onChange={handleChange}
-                        placeholder="شارع التحرير"
-                        className={errors.street ? "border-red-500" : ""}
-                    />
-                    {errors.street && <p className="text-sm text-red-500">{errors.street}</p>}
-                </div>
-
-                {/* Building Details - 3 Small Fields */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                        <Label htmlFor="building">رقم العمارة</Label>
-                        <Input
-                            id="building"
-                            name="building"
-                            value={formData.building}
-                            onChange={handleChange}
-                            placeholder="12"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="floor">الدور</Label>
-                        <Input
-                            id="floor"
-                            name="floor"
-                            value={formData.floor}
-                            onChange={handleChange}
-                            placeholder="3"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="apartment">الشقة</Label>
-                        <Input
-                            id="apartment"
-                            name="apartment"
-                            value={formData.apartment}
-                            onChange={handleChange}
-                            placeholder="5"
-                        />
-                    </div>
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-2">
-                    <Label htmlFor="notes">ملاحظات للمندوب (اختياري)</Label>
-                    <Textarea
-                        id="notes"
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleChange}
-                        placeholder="مثال: أمام البوابة الخلفية، الاتصال قبل الوصول..."
-                        rows={2}
-                    />
-                </div>
-            </div>
-
-            {/* Payment Section */}
-            <div className="bg-white rounded-2xl border p-6 space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    <h2>طريقة الدفع</h2>
-                </div>
-
-                <RadioGroup
-                    value={formData.paymentMethod}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "cod" | "card" }))}
-                    className="space-y-3"
-                >
-                    <div className={`flex items-center space-x-3 space-x-reverse p-4 border rounded-xl cursor-pointer transition-colors ${formData.paymentMethod === "cod" ? "border-primary bg-primary/5" : "hover:bg-gray-50"}`}>
-                        <RadioGroupItem value="cod" id="cod" />
-                        <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                            <div className="font-medium">💵 الدفع عند الاستلام</div>
-                            <p className="text-sm text-gray-500">ادفع نقداً للمندوب</p>
-                        </Label>
-                    </div>
-                    <div className={`flex items-center space-x-3 space-x-reverse p-4 border rounded-xl cursor-pointer transition-colors ${formData.paymentMethod === "card" ? "border-primary bg-primary/5" : "hover:bg-gray-50"} opacity-50`}>
-                        <RadioGroupItem value="card" id="card" disabled />
-                        <Label htmlFor="card" className="flex-1 cursor-pointer">
-                            <div className="font-medium">💳 بطاقة ائتمان</div>
-                            <p className="text-sm text-gray-500">قريباً - Visa, Mastercard</p>
-                        </Label>
-                    </div>
-                </RadioGroup>
-            </div>
-
-            {/* Order Summary & Submit */}
-            <div className="bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-6 text-white">
-                <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg">الإجمالي:</span>
-                    <span className="text-2xl font-bold">{(cartTotal / 100).toFixed(2)} ج.م</span>
-                </div>
-                <Button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full bg-white text-primary hover:bg-gray-100 font-bold text-lg h-14"
-                >
-                    {isProcessing ? (
-                        <>
-                            <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                            جاري تأكيد الطلب...
-                        </>
-                    ) : (
-                        <>
-                            تأكيد الطلب
-                            <ArrowRight className="h-5 w-5 mr-2" />
-                        </>
-                    )}
-                </Button>
-            </div>
-
-            {/* Back Link */}
-            <div className="text-center">
+        <form onSubmit={handleSubmit} dir="rtl">
+            {/* Breadcrumb Navigation */}
+            <div className="mb-6">
                 <Link
                     href={`/${tenantSlug}/cart`}
-                    className="text-gray-500 hover:text-gray-700 inline-flex items-center"
+                    className="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
                 >
-                    <ArrowLeft className="h-4 w-4 ml-1" />
+                    <ChevronLeft className="h-4 w-4 ml-1" />
                     العودة للسلة
                 </Link>
+            </div>
+
+            {/* Two-Column Layout */}
+            <div className="grid lg:grid-cols-[1fr,380px] gap-8">
+                {/* Left Column - Forms (60-70%) */}
+                <div className="space-y-6">
+                    {/* Delivery Information */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                            <h2 className="text-lg font-semibold">معلومات التوصيل</h2>
+                        </div>
+
+                        {/* Name & Phone */}
+                        <div className="grid sm:grid-cols-2 gap-5 mb-5">
+                            <div className="space-y-2">
+                                <Label htmlFor="fullName">الاسم بالكامل *</Label>
+                                <Input
+                                    id="fullName"
+                                    name="fullName"
+                                    value={formData.fullName}
+                                    onChange={handleChange}
+                                    placeholder="محمد أحمد"
+                                    className={`h-12 rounded-xl ${errors.fullName ? "border-red-500" : ""}`}
+                                />
+                                {errors.fullName && <p className="text-sm text-red-500">{errors.fullName}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">رقم الهاتف *</Label>
+                                <Input
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    placeholder="01xxxxxxxxx"
+                                    className={`h-12 rounded-xl ${errors.phone ? "border-red-500" : ""}`}
+                                />
+                                {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+                            </div>
+                        </div>
+
+                        {/* Location Button */}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleGetLocation}
+                            disabled={locationLoading}
+                            className="w-full h-12 rounded-xl mb-5 border-dashed"
+                        >
+                            {locationLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                            ) : (
+                                <MapPin className="h-4 w-4 ml-2" />
+                            )}
+                            تحديد موقعي تلقائياً
+                        </Button>
+
+                        {/* Governorate & City */}
+                        <div className="grid sm:grid-cols-2 gap-5 mb-5">
+                            <div className="space-y-2">
+                                <Label htmlFor="governorate">المحافظة *</Label>
+                                <select
+                                    id="governorate"
+                                    name="governorate"
+                                    value={formData.governorate}
+                                    onChange={handleChange}
+                                    className={`w-full h-12 px-4 rounded-xl border ${errors.governorate ? "border-red-500" : "border-gray-200"} bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
+                                >
+                                    <option value="">اختر المحافظة</option>
+                                    {GOVERNORATES.map(gov => (
+                                        <option key={gov} value={gov}>{gov}</option>
+                                    ))}
+                                </select>
+                                {errors.governorate && <p className="text-sm text-red-500">{errors.governorate}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="city">المدينة / المنطقة</Label>
+                                <Input
+                                    id="city"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                    placeholder="مدينة نصر"
+                                    className="h-12 rounded-xl"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Street */}
+                        <div className="space-y-2 mb-5">
+                            <Label htmlFor="street">الشارع *</Label>
+                            <Input
+                                id="street"
+                                name="street"
+                                value={formData.street}
+                                onChange={handleChange}
+                                placeholder="شارع التحرير"
+                                className={`h-12 rounded-xl ${errors.street ? "border-red-500" : ""}`}
+                            />
+                            {errors.street && <p className="text-sm text-red-500">{errors.street}</p>}
+                        </div>
+
+                        {/* Building Details - With Better Spacing */}
+                        <div className="grid grid-cols-3 gap-4 mb-5">
+                            <div className="space-y-2">
+                                <Label htmlFor="building">رقم العمارة</Label>
+                                <Input
+                                    id="building"
+                                    name="building"
+                                    value={formData.building}
+                                    onChange={handleChange}
+                                    placeholder="12"
+                                    className="h-12 rounded-xl text-center"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="floor">الدور</Label>
+                                <Input
+                                    id="floor"
+                                    name="floor"
+                                    value={formData.floor}
+                                    onChange={handleChange}
+                                    placeholder="3"
+                                    className="h-12 rounded-xl text-center"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="apartment">الشقة</Label>
+                                <Input
+                                    id="apartment"
+                                    name="apartment"
+                                    value={formData.apartment}
+                                    onChange={handleChange}
+                                    placeholder="5"
+                                    className="h-12 rounded-xl text-center"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">ملاحظات للمندوب (اختياري)</Label>
+                            <Textarea
+                                id="notes"
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleChange}
+                                placeholder="مثال: أمام البوابة الخلفية، الاتصال قبل الوصول..."
+                                rows={3}
+                                className="rounded-xl resize-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Payment Methods */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <CreditCard className="h-5 w-5 text-primary" />
+                            </div>
+                            <h2 className="text-lg font-semibold">طريقة الدفع</h2>
+                        </div>
+
+                        <RadioGroup
+                            value={formData.paymentMethod}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "cod" | "card" }))}
+                            className="space-y-4"
+                        >
+                            <label
+                                htmlFor="cod"
+                                className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.paymentMethod === "cod"
+                                        ? "border-primary bg-primary/5"
+                                        : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                            >
+                                <RadioGroupItem value="cod" id="cod" />
+                                <div className="flex-1">
+                                    <div className="font-medium flex items-center gap-2">
+                                        💵 الدفع عند الاستلام
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">ادفع نقداً للمندوب عند استلام الطلب</p>
+                                </div>
+                            </label>
+                            <label
+                                htmlFor="card"
+                                className="flex items-center gap-4 p-4 border-2 rounded-xl cursor-not-allowed opacity-50 border-gray-200"
+                            >
+                                <RadioGroupItem value="card" id="card" disabled />
+                                <div className="flex-1">
+                                    <div className="font-medium flex items-center gap-2">
+                                        💳 بطاقة ائتمان
+                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">قريباً</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">Visa, Mastercard</p>
+                                </div>
+                            </label>
+                        </RadioGroup>
+                    </div>
+                </div>
+
+                {/* Right Column - Order Summary (30-40%, Sticky) */}
+                <div className="lg:sticky lg:top-6 lg:self-start">
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <ShoppingBag className="h-5 w-5 text-primary" />
+                            </div>
+                            <h2 className="text-lg font-semibold">ملخص الطلب</h2>
+                        </div>
+
+                        {/* Cart Items (if provided) */}
+                        {cartItems.length > 0 && (
+                            <div className="space-y-3 mb-6 pb-6 border-b">
+                                {cartItems.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">
+                                            {item.image ? (
+                                                <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                                            ) : (
+                                                "صورة"
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{item.name}</p>
+                                            <p className="text-xs text-gray-500">الكمية: {item.quantity}</p>
+                                        </div>
+                                        <p className="text-sm font-medium">{(item.price / 100).toFixed(2)} ج.م</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Totals */}
+                        <div className="space-y-3 mb-6">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">المجموع الفرعي</span>
+                                <span>{(subtotal / 100).toFixed(2)} ج.م</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">الشحن</span>
+                                <span className="text-green-600 font-medium">مجاني</span>
+                            </div>
+                            <div className="h-px bg-gray-200 my-3"></div>
+                            <div className="flex justify-between text-lg font-bold">
+                                <span>الإجمالي</span>
+                                <span className="text-primary">{(total / 100).toFixed(2)} ج.م</span>
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <Button
+                            type="submit"
+                            disabled={isProcessing}
+                            className="w-full h-14 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all"
+                        >
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                                    جاري تأكيد الطلب...
+                                </>
+                            ) : (
+                                <>
+                                    تأكيد الطلب
+                                    <ArrowRight className="h-5 w-5 mr-2" />
+                                </>
+                            )}
+                        </Button>
+
+                        {/* Trust Badges */}
+                        <div className="mt-6 pt-6 border-t border-gray-100">
+                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                                <span>🔒 دفع آمن</span>
+                                <span>•</span>
+                                <span>📦 توصيل سريع</span>
+                                <span>•</span>
+                                <span>↩️ إرجاع سهل</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </form>
     );
