@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
 import { bindCartToCustomer } from "@/lib/vendure-cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Loader2, Eye, EyeOff, CheckCircle, Phone, MapPin } from "lucide-react";
+import { LocationPicker } from "./location-picker";
 
 interface RegisterFormProps {
     tenantSlug: string;
@@ -16,12 +17,16 @@ interface RegisterFormProps {
 
 export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
     const router = useRouter();
-    const { register, isLoading } = useAuthStore(tenantSlug);
+    const { register, login, isLoading } = useAuthStore(tenantSlug);
 
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
         email: "",
+        phone: "",
+        street: "",
+        province: "",
+        notes: "",
         password: "",
         confirmPassword: "",
     });
@@ -30,9 +35,18 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
+
+    // Handle location detection from LocationPicker
+    const handleLocationDetected = useCallback((location: { street: string; province: string }) => {
+        setFormData((prev) => ({
+            ...prev,
+            street: location.street,
+            province: location.province,
+        }));
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,127 +58,218 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
         setIsSubmitting(true);
 
         // Validation
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-            setError("Please fill in all fields");
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password) {
+            setError("يرجى ملء جميع الحقول المطلوبة");
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Phone validation - must be digits only and at least 10 digits
+        const phoneDigits = formData.phone.replace(/\D/g, '');
+        if (phoneDigits.length < 10) {
+            setError("رقم التليفون يجب أن يكون على الأقل 10 أرقام");
             setIsSubmitting(false);
             return;
         }
 
         if (formData.password.length < 6) {
-            setError("Password must be at least 6 characters");
+            setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
             setIsSubmitting(false);
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setError("Passwords do not match");
+            setError("كلمات المرور غير متطابقة");
             setIsSubmitting(false);
             return;
         }
 
-        const result = await register(
-            {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                password: formData.password,
-            },
-            channelToken
-        );
+        try {
+            const result = await register(
+                {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    password: formData.password,
+                    // Custom fields will be passed via separate mutation or extended register
+                    customFields: {
+                        phoneNumber: formData.phone,
+                        street: formData.street,
+                        province: formData.province,
+                        notes: formData.notes,
+                    },
+                },
+                channelToken
+            );
 
-        if (result) {
-            // Bind any guest cart to the newly registered customer
-            // This transfers products added before registration to the new account
-            await bindCartToCustomer(channelToken, {
-                emailAddress: formData.email,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-            });
+            if (result) {
+                // Bind any guest cart to the newly registered customer
+                await bindCartToCustomer(channelToken, {
+                    emailAddress: formData.email,
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                });
 
-            setSuccess(true);
-            // Redirect to account page after short delay
-            setTimeout(() => {
-                router.push(`/${tenantSlug}/account`);
-                router.refresh();
-            }, 1500);
-        } else {
-            setError("Registration failed. Email may already be in use.");
+                // Auto-login after registration (no verification required)
+                const loginResult = await login(
+                    { email: formData.email, password: formData.password },
+                    channelToken
+                );
+
+                setSuccess(true);
+
+                // Redirect to home/account page
+                setTimeout(() => {
+                    window.location.href = `/${tenantSlug}`;
+                }, 1000);
+            } else {
+                setError("فشل التسجيل. الإيميل أو رقم التليفون قد يكون مستخدم بالفعل.");
+                setIsSubmitting(false);
+            }
+        } catch (err) {
+            // Check for specific error messages from the trigger
+            const errorMessage = err instanceof Error ? err.message : '';
+            if (errorMessage.includes('Email already registered') || errorMessage.includes('الإيميل مسجل')) {
+                setError("هذا الإيميل مسجل بالفعل في هذا المتجر");
+            } else if (errorMessage.includes('Phone number already registered') || errorMessage.includes('رقم التليفون مسجل')) {
+                setError("رقم التليفون مسجل بالفعل في هذا المتجر");
+            } else {
+                setError("حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.");
+            }
             setIsSubmitting(false);
         }
     };
 
-    // Show success message - email verification required
+    // Show success message
     if (success) {
         return (
             <div className="text-center space-y-4 bg-white rounded-2xl border p-8">
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-                <h3 className="text-xl font-semibold text-gray-900">Account Created!</h3>
+                <h3 className="text-xl font-semibold text-gray-900">تم إنشاء الحساب بنجاح!</h3>
                 <p className="text-gray-600">
-                    Welcome, {formData.firstName}! We've sent a verification email to:
+                    مرحباً {formData.firstName}! جاري تحويلك للصفحة الرئيسية...
                 </p>
-                <p className="font-medium text-gray-900">{formData.email}</p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-                    Please check your email and click the verification link to activate your account.
+                <div className="flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={() => router.push(`/${tenantSlug}/auth/login`)}
-                    className="mt-4"
-                >
-                    Go to Login
-                </Button>
             </div>
         );
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border p-6">
+        <form onSubmit={handleSubmit} className="space-y-5 bg-white rounded-2xl border p-6">
             {error && (
                 <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
                     {error}
                 </div>
             )}
 
+            {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">الاسم الأول *</Label>
                     <Input
                         id="firstName"
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleChange}
-                        placeholder="John"
+                        placeholder="أحمد"
                         disabled={isLoading}
+                        dir="rtl"
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">الاسم الأخير *</Label>
                     <Input
                         id="lastName"
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleChange}
-                        placeholder="Doe"
+                        placeholder="محمد"
                         disabled={isLoading}
+                        dir="rtl"
                     />
                 </div>
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">البريد الإلكتروني *</Label>
                 <Input
                     id="email"
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="you@example.com"
+                    placeholder="example@email.com"
                     disabled={isLoading}
+                    dir="ltr"
                 />
             </div>
 
+            {/* Phone */}
             <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    رقم التليفون *
+                </Label>
+                <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="01xxxxxxxxx"
+                    disabled={isLoading}
+                    dir="ltr"
+                />
+            </div>
+
+            {/* Location Section */}
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                <Label className="flex items-center gap-2 text-base font-medium">
+                    <MapPin className="h-4 w-4" />
+                    الموقع (اختياري)
+                </Label>
+
+                {/* Location Picker Button */}
+                <LocationPicker
+                    onLocationDetected={handleLocationDetected}
+                    disabled={isLoading}
+                />
+
+                {/* Street - Always editable */}
+                <div className="space-y-2">
+                    <Label htmlFor="street">اسم الشارع</Label>
+                    <Input
+                        id="street"
+                        name="street"
+                        value={formData.street}
+                        onChange={handleChange}
+                        placeholder="شارع 123، بجوار مسجد..."
+                        disabled={isLoading}
+                        dir="rtl"
+                    />
+                </div>
+
+                {/* Province - Always editable */}
+                <div className="space-y-2">
+                    <Label htmlFor="province">المحافظة</Label>
+                    <Input
+                        id="province"
+                        name="province"
+                        value={formData.province}
+                        onChange={handleChange}
+                        placeholder="القاهرة"
+                        disabled={isLoading}
+                        dir="rtl"
+                    />
+                </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+                <Label htmlFor="password">كلمة المرور *</Label>
                 <div className="relative">
                     <Input
                         id="password"
@@ -178,15 +283,16 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                 </div>
             </div>
 
+            {/* Confirm Password */}
             <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">تأكيد كلمة المرور *</Label>
                 <Input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -198,19 +304,35 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
                 />
             </div>
 
+            {/* Notes */}
+            <div className="space-y-2">
+                <Label htmlFor="notes">ملاحظات (اختياري)</Label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    placeholder="أي ملاحظات إضافية..."
+                    disabled={isLoading}
+                    dir="rtl"
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                />
+            </div>
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
+                        جاري إنشاء الحساب...
                     </>
                 ) : (
-                    "Create Account"
+                    "إنشاء حساب"
                 )}
             </Button>
 
             <p className="text-xs text-gray-500 text-center">
-                By creating an account, you agree to our Terms of Service and Privacy Policy.
+                بإنشاء حساب، أنت توافق على شروط الخدمة وسياسة الخصوصية.
             </p>
         </form>
     );

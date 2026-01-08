@@ -19,6 +19,7 @@ export const config: VendureConfig = {
     },
     authOptions: {
         tokenMethod: ['bearer', 'cookie'],
+        requireVerification: false, // العميل يدخل مباشرة بدون توثيق الإيميل
         superadminCredentials: {
             identifier: process.env.SUPERADMIN_USERNAME || 'superadmin',
             password: process.env.SUPERADMIN_PASSWORD || 'superadmin',
@@ -26,6 +27,38 @@ export const config: VendureConfig = {
         cookieOptions: {
             secret: process.env.COOKIE_SECRET || 'change-me-in-production',
         },
+    },
+    customFields: {
+        Customer: [
+            {
+                name: 'phoneNumber',
+                type: 'string',
+                label: [{ languageCode: 'en', value: 'Phone Number' }],
+                nullable: false,
+                public: true,
+            },
+            {
+                name: 'street',
+                type: 'string',
+                label: [{ languageCode: 'en', value: 'Street Address' }],
+                nullable: true,
+                public: true,
+            },
+            {
+                name: 'province',
+                type: 'string',
+                label: [{ languageCode: 'en', value: 'Province/Governorate' }],
+                nullable: true,
+                public: true,
+            },
+            {
+                name: 'notes',
+                type: 'text', // text for longer content
+                label: [{ languageCode: 'en', value: 'Notes' }],
+                nullable: true,
+                public: true,
+            },
+        ],
     },
     dbConnectionOptions: {
         type: 'postgres',

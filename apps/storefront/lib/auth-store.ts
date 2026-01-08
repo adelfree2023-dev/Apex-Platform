@@ -25,6 +25,12 @@ interface RegisterData {
     lastName: string;
     email: string;
     password: string;
+    customFields?: {
+        phoneNumber?: string;
+        street?: string;
+        province?: string;
+        notes?: string;
+    };
 }
 
 const VENDURE_API = process.env.NEXT_PUBLIC_VENDURE_API_URL || "http://127.0.0.1:3001/shop-api";
@@ -179,6 +185,9 @@ function createAuthStore(tenantSlug: string) {
                                         lastName: data.lastName,
                                         emailAddress: data.email,
                                         password: data.password,
+                                        ...(data.customFields && {
+                                            customFields: data.customFields,
+                                        }),
                                     },
                                 },
                             }),
