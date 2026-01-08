@@ -30,15 +30,9 @@ export const config: VendureConfig = {
         },
     },
     customFields: {
+        // NOTE: phoneNumber is now a built-in field in Vendure 2.x Customer entity
+        // Do NOT add it here to avoid "entity already has field" error
         Customer: [
-            {
-                name: 'phoneNumber',
-                type: 'string',
-                label: [{ languageCode: LanguageCode.en, value: 'Phone Number' }],
-                nullable: true, // Changed to true for existing customers
-                defaultValue: '',
-                public: true,
-            },
             {
                 name: 'street',
                 type: 'string',
