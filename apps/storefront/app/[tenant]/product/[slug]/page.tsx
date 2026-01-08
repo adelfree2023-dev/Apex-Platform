@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/manager-client";
-import { createVendureClient, vendureApi } from "@/lib/vendure-client";
+import { getProductBySlug, Product } from "@/lib/vendure-client";
 import { ProductDetails } from "@/components/products/product-details";
-import { Product } from "@/types/product";
 
 export default async function ProductPage({
     params,
@@ -17,11 +16,8 @@ export default async function ProductPage({
         notFound();
     }
 
-    // 2. Init Vendure Client
-    const client = createVendureClient(tenantData.vendureChannelToken);
-
-    // 3. Fetch Product
-    const product = await vendureApi.getProduct(client, slug);
+    // 2. Fetch Product directly
+    const product = await getProductBySlug(tenantData.vendureChannelToken, slug);
 
     if (!product) {
         notFound();
@@ -29,7 +25,7 @@ export default async function ProductPage({
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <ProductDetails product={product as Product} />
+            <ProductDetails product={product} />
         </div>
     );
 }
