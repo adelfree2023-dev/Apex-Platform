@@ -268,10 +268,12 @@ export function ShippingForm({
                         {/* Save Address Checkbox (only for logged-in users) */}
                         {customer && (
                             <div className="flex items-center space-x-2">
-                                <Checkbox
+                                <input
+                                    type="checkbox"
                                     id="saveAddress"
                                     checked={saveAddress}
-                                    onCheckedChange={(checked) => setSaveAddress(checked === true)}
+                                    onChange={(e) => setSaveAddress(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                 />
                                 <Label htmlFor="saveAddress" className="text-sm font-normal cursor-pointer">
                                     Save this address for future orders
