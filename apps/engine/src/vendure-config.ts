@@ -2,6 +2,7 @@ import {
     VendureConfig,
     DefaultJobQueuePlugin,
     DefaultSearchPlugin,
+    LanguageCode,
 } from '@vendure/core';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
@@ -33,28 +34,28 @@ export const config: VendureConfig = {
             {
                 name: 'phoneNumber',
                 type: 'string',
-                label: [{ languageCode: 'en', value: 'Phone Number' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Phone Number' }],
                 nullable: false,
                 public: true,
             },
             {
                 name: 'street',
                 type: 'string',
-                label: [{ languageCode: 'en', value: 'Street Address' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Street Address' }],
                 nullable: true,
                 public: true,
             },
             {
                 name: 'province',
                 type: 'string',
-                label: [{ languageCode: 'en', value: 'Province/Governorate' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Province/Governorate' }],
                 nullable: true,
                 public: true,
             },
             {
                 name: 'notes',
                 type: 'text', // text for longer content
-                label: [{ languageCode: 'en', value: 'Notes' }],
+                label: [{ languageCode: LanguageCode.en, value: 'Notes' }],
                 nullable: true,
                 public: true,
             },
