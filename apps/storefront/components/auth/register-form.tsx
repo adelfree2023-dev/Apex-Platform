@@ -91,9 +91,8 @@ export function RegisterForm({ tenantSlug, channelToken }: RegisterFormProps) {
                     lastName: formData.lastName,
                     email: formData.email,
                     password: formData.password,
-                    // Custom fields will be passed via separate mutation or extended register
+                    phoneNumber: formData.phone, // Built-in field in Vendure 2.x
                     customFields: {
-                        phoneNumber: formData.phone,
                         street: formData.street,
                         province: formData.province,
                         notes: formData.notes,

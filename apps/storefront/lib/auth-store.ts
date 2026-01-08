@@ -25,8 +25,8 @@ interface RegisterData {
     lastName: string;
     email: string;
     password: string;
+    phoneNumber?: string; // Built-in field in Vendure 2.x
     customFields?: {
-        phoneNumber?: string;
         street?: string;
         province?: string;
         notes?: string;
@@ -185,6 +185,7 @@ function createAuthStore(tenantSlug: string) {
                                         lastName: data.lastName,
                                         emailAddress: data.email,
                                         password: data.password,
+                                        phoneNumber: data.phoneNumber || '', // Built-in field in Vendure 2.x
                                         ...(data.customFields && {
                                             customFields: data.customFields,
                                         }),
