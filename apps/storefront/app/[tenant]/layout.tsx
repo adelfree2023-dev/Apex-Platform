@@ -73,7 +73,7 @@ export default async function TenantLayout({
           </div>
         </header>
 
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main className="flex-1 px-6 py-8">
           <TenantAuthGuardWrapper tenantSlug={tenant} channelToken={tenantData.vendureChannelToken || tenant}>
             {children}
           </TenantAuthGuardWrapper>
