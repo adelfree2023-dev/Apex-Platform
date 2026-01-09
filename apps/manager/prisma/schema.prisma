@@ -98,6 +98,7 @@ model Tenant {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
 
   // Relations
   license          License?
@@ -110,6 +111,7 @@ model Tenant {
   subscription     Subscription?
   payments         Payment[]
 
+  @@index([deletedAt])
   @@map("tenants")
 }
 
@@ -159,6 +161,7 @@ model User {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
 
   // Relations
   tenants  TenantUser[]
@@ -166,6 +169,7 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -192,9 +196,11 @@ model Session {
 
 /// Junction table for User-Tenant relationship
 model TenantUser {
-  id       String   @id @default(cuid())
-  role     UserRole @default(TENANT_STAFF)
-  joinedAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  role        UserRole @default(TENANT_STAFF)
+  joinedAt    DateTime @default(now())
+  permissions Json?    // Flexible RBAC: ["VIEW_ORDERS", "EDIT_PRODUCTS"]
+  deletedAt   DateTime? // Soft delete
 
   // Relations
   userId   String
@@ -203,6 +209,7 @@ model TenantUser {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tenantId])
+  @@index([deletedAt])
   @@map("tenant_users")
 }
 
@@ -380,6 +387,11 @@ model TenantPaymentSettings {
   // ============ General Settings ============
   defaultCurrency      String   @default("EGP")
   testMode             Boolean  @default(true) // Test mode for development
+  
+  // ============ FLEXIBLE PAYMENT CONFIGS ============
+  // JSON for adding new wallets without migration
+  // Example: {"we_cash": "015xxx", "aman": "01xxx", "custom": "..."}
+  manualPaymentConfigs Json?
   
   // Timestamps
   createdAt DateTime @default(now())
