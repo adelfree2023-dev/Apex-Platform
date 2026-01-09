@@ -146,7 +146,7 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                             {/* Header with Breadcrumb */}
                             <div className="px-5 py-4 border-b border-gray-100">
-                                <Link href={`/${tenantSlug}/cart`} className="text-xs text-gray-400 hover:text-primary transition-colors inline-flex items-center gap-1 mb-2">
+                                <Link href={`/${tenantSlug}/cart`} className="text-sm text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1.5 mb-2 font-medium">
                                     ← العودة للسلة
                                 </Link>
                                 <h1 className="text-lg font-bold text-gray-900">إتمام الطلب</h1>
