@@ -142,7 +142,7 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                 <div className="flex flex-col lg:flex-row gap-6">
 
                     {/* ========== MAIN FORM (grows to fill) ========== */}
-                    <div className="flex-1 lg:flex-[2] order-2 lg:order-1">
+                    <div className="flex-1 lg:flex-[2]">
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -152,139 +152,92 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                                 </Link>
                             </div>
 
-                            <div className="p-6 lg:p-8 space-y-8">
-                                {/* === SECTION 1: DELIVERY INFO === */}
-                                <section>
-                                    <div className="flex items-center gap-3 mb-5">
-                                        <span className="w-8 h-8 rounded-full bg-primary text-white text-sm flex items-center justify-center font-bold">1</span>
-                                        <h2 className="text-lg font-semibold text-gray-900">معلومات التوصيل</h2>
-                                    </div>
-
-                                    {/* Name & Phone */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">الاسم بالكامل *</Label>
-                                            <Input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="محمد أحمد"
-                                                className={`h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-base ${errors.fullName ? "border-red-400 focus:border-red-400" : "focus:border-primary"}`} />
-                                            {errors.fullName && <p className="text-xs text-red-500 mt-1.5">{errors.fullName}</p>}
-                                        </div>
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">رقم الهاتف *</Label>
-                                            <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="01xxxxxxxxx"
-                                                className={`h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-base ${errors.phone ? "border-red-400 focus:border-red-400" : "focus:border-primary"}`} />
-                                            {errors.phone && <p className="text-xs text-red-500 mt-1.5">{errors.phone}</p>}
-                                        </div>
-                                    </div>
-
-                                    {/* Auto Location */}
-                                    <button type="button" onClick={handleGetLocation} disabled={locationLoading}
-                                        className="w-full h-12 mb-5 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 hover:border-primary hover:text-primary flex items-center justify-center gap-2 transition-all text-sm font-medium">
-                                        {locationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-                                        تحديد موقعي تلقائياً
-                                    </button>
-
-                                    {/* Governorate & City */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">المحافظة *</Label>
-                                            <div className="relative">
-                                                <select name="governorate" value={formData.governorate} onChange={handleChange}
-                                                    className={`w-full h-12 px-4 pr-10 rounded-xl bg-gray-50/50 border border-gray-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-base appearance-none cursor-pointer ${errors.governorate ? "border-red-400" : ""}`}>
-                                                    <option value="">اختر المحافظة</option>
-                                                    {GOVERNORATES.map(gov => <option key={gov} value={gov}>{gov}</option>)}
-                                                </select>
-                                                <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                                            </div>
-                                            {errors.governorate && <p className="text-xs text-red-500 mt-1.5">{errors.governorate}</p>}
-                                        </div>
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">المدينة / المنطقة</Label>
-                                            <Input name="city" value={formData.city} onChange={handleChange} placeholder="مدينة نصر"
-                                                className="h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white focus:border-primary text-base" />
-                                        </div>
-                                    </div>
-
-                                    {/* Street */}
-                                    <div className="mb-5">
-                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">الشارع *</Label>
-                                        <Input name="street" value={formData.street} onChange={handleChange} placeholder="شارع التحرير"
-                                            className={`h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-base ${errors.street ? "border-red-400 focus:border-red-400" : "focus:border-primary"}`} />
-                                        {errors.street && <p className="text-xs text-red-500 mt-1.5">{errors.street}</p>}
-                                    </div>
-
-                                    {/* Building Details */}
-                                    <div className="grid grid-cols-3 gap-4 mb-5">
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">رقم العمارة</Label>
-                                            <Input name="building" value={formData.building} onChange={handleChange} placeholder="12" className="h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-center text-base" />
-                                        </div>
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">الدور</Label>
-                                            <Input name="floor" value={formData.floor} onChange={handleChange} placeholder="3" className="h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-center text-base" />
-                                        </div>
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">الشقة</Label>
-                                            <Input name="apartment" value={formData.apartment} onChange={handleChange} placeholder="5" className="h-12 rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white text-center text-base" />
-                                        </div>
-                                    </div>
-
-                                    {/* Notes */}
+                            <div className="p-5 space-y-4">
+                                {/* Name & Phone - Same Row */}
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">ملاحظات للمندوب (اختياري)</Label>
-                                        <Textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="مثال: أمام البوابة الخلفية، الاتصال قبل الوصول..."
-                                            rows={3} className="rounded-xl bg-gray-50/50 border-gray-200 focus:bg-white focus:border-primary resize-none text-base" />
+                                        <Input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="الاسم بالكامل *"
+                                            className={`h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-sm ${errors.fullName ? "border-red-400" : "focus:border-primary"}`} />
+                                        {errors.fullName && <p className="text-[10px] text-red-500 mt-1">{errors.fullName}</p>}
                                     </div>
-                                </section>
-
-                                {/* Divider */}
-                                <hr className="border-gray-100" />
-
-                                {/* === SECTION 2: PAYMENT METHOD === */}
-                                <section>
-                                    <div className="flex items-center gap-3 mb-5">
-                                        <span className="w-8 h-8 rounded-full bg-primary text-white text-sm flex items-center justify-center font-bold">2</span>
-                                        <h2 className="text-lg font-semibold text-gray-900">طريقة الدفع</h2>
+                                    <div>
+                                        <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="رقم الهاتف * (01xxxxxxxxx)"
+                                            className={`h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-sm ${errors.phone ? "border-red-400" : "focus:border-primary"}`} />
+                                        {errors.phone && <p className="text-[10px] text-red-500 mt-1">{errors.phone}</p>}
                                     </div>
+                                </div>
 
-                                    {/* Payment Dropdown */}
+                                {/* Auto Location */}
+                                <button type="button" onClick={handleGetLocation} disabled={locationLoading}
+                                    className="w-full h-10 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-primary hover:text-primary flex items-center justify-center gap-2 transition-all text-sm">
+                                    {locationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                                    📍 تحديد موقعي تلقائياً
+                                </button>
+
+                                {/* Governorate & City - Same Row */}
+                                <div className="grid grid-cols-2 gap-3">
                                     <div className="relative">
-                                        <button type="button" onClick={() => setPaymentOpen(!paymentOpen)}
-                                            className="w-full h-14 px-5 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 flex items-center justify-between transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">{selectedPayment.icon}</span>
-                                                <div className="text-right">
-                                                    <p className="font-semibold text-gray-900">{selectedPayment.name}</p>
-                                                    <p className="text-xs text-gray-500">{selectedPayment.desc}</p>
-                                                </div>
-                                            </div>
-                                            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${paymentOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {paymentOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-2xl z-50 overflow-hidden">
-                                                {PAYMENT_METHODS.map((method) => (
-                                                    <button key={method.id} type="button" disabled={!method.enabled}
-                                                        onClick={() => { if (method.enabled) { setFormData(prev => ({ ...prev, paymentMethod: method.id as "cod" | "card" })); setPaymentOpen(false); } }}
-                                                        className={`w-full px-5 py-4 flex items-center gap-4 text-right transition-colors ${method.enabled ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-40 cursor-not-allowed'} ${formData.paymentMethod === method.id ? 'bg-primary/5' : ''}`}>
-                                                        <span className="text-2xl">{method.icon}</span>
-                                                        <div className="flex-1">
-                                                            <p className="font-semibold text-gray-900">{method.name}</p>
-                                                            <p className="text-xs text-gray-500">{method.desc}</p>
-                                                        </div>
-                                                        {!method.enabled && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">قريباً</span>}
-                                                        {formData.paymentMethod === method.id && <Check className="w-5 h-5 text-primary" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <select name="governorate" value={formData.governorate} onChange={handleChange}
+                                            className={`w-full h-11 px-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-primary outline-none text-sm appearance-none cursor-pointer ${errors.governorate ? "border-red-400" : ""}`}>
+                                            <option value="">المحافظة *</option>
+                                            {GOVERNORATES.map(gov => <option key={gov} value={gov}>{gov}</option>)}
+                                        </select>
+                                        <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        {errors.governorate && <p className="text-[10px] text-red-500 mt-1">{errors.governorate}</p>}
                                     </div>
-                                </section>
+                                    <Input name="city" value={formData.city} onChange={handleChange} placeholder="المدينة / المنطقة"
+                                        className="h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white focus:border-primary text-sm" />
+                                </div>
+
+                                {/* Street */}
+                                <div>
+                                    <Input name="street" value={formData.street} onChange={handleChange} placeholder="الشارع *"
+                                        className={`h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-sm ${errors.street ? "border-red-400" : "focus:border-primary"}`} />
+                                    {errors.street && <p className="text-[10px] text-red-500 mt-1">{errors.street}</p>}
+                                </div>
+
+                                {/* Building / Floor / Apartment - Same Row */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    <Input name="building" value={formData.building} onChange={handleChange} placeholder="رقم العمارة *" className="h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-center text-sm" />
+                                    <Input name="floor" value={formData.floor} onChange={handleChange} placeholder="الدور *" className="h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-center text-sm" />
+                                    <Input name="apartment" value={formData.apartment} onChange={handleChange} placeholder="الشقة *" className="h-11 rounded-lg bg-gray-50 border-gray-200 focus:bg-white text-center text-sm" />
+                                </div>
+
+                                {/* Notes */}
+                                <Textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="ملاحظات للمندوب (اختياري) - مثال: أمام البوابة الخلفية..."
+                                    rows={2} className="rounded-lg bg-gray-50 border-gray-200 focus:bg-white focus:border-primary resize-none text-sm" />
+
+                                {/* Payment Method - Compact */}
+                                <div className="relative">
+                                    <button type="button" onClick={() => setPaymentOpen(!paymentOpen)}
+                                        className="w-full h-12 px-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white flex items-center justify-between transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xl">{selectedPayment.icon}</span>
+                                            <span className="font-medium text-sm">{selectedPayment.name}</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${paymentOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {paymentOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-xl z-50 overflow-hidden">
+                                            {PAYMENT_METHODS.map((method) => (
+                                                <button key={method.id} type="button" disabled={!method.enabled}
+                                                    onClick={() => { if (method.enabled) { setFormData(prev => ({ ...prev, paymentMethod: method.id as "cod" | "card" })); setPaymentOpen(false); } }}
+                                                    className={`w-full px-4 py-3 flex items-center gap-3 text-right text-sm ${method.enabled ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'} ${formData.paymentMethod === method.id ? 'bg-primary/5' : ''}`}>
+                                                    <span className="text-lg">{method.icon}</span>
+                                                    <span className="flex-1 font-medium">{method.name}</span>
+                                                    {!method.enabled && <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded">قريباً</span>}
+                                                    {formData.paymentMethod === method.id && <Check className="w-4 h-4 text-primary" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* ========== SIDEBAR: ORDER SUMMARY ========== */}
-                    <div className="lg:w-[380px] order-1 lg:order-2 flex-shrink-0">
+                    <div className="lg:w-[380px] flex-shrink-0">
                         <div className="lg:sticky lg:top-4">
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
