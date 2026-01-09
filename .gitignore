@@ -39,3 +39,6 @@ prisma/migrations/*.sql.pending
 
 # Vendure
 static/assets
+
+# Backup folders
+apps/*_backup_*
