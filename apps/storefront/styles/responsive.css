@@ -1,0 +1,142 @@
+/**
+ * ⚔️ APEX Responsive Utility Classes
+ * CSS classes for consistent mobile-first responsive design
+ * 
+ * Part of Operation Phoenix - Phase 4 REFACTOR
+ */
+
+/* ============================================
+   RESPONSIVE CONTAINERS
+============================================ */
+
+/* Auto-responsive container */
+.apex-container {
+  @apply w-full px-4 mx-auto;
+  @apply sm:px-6 md:px-8;
+  @apply max-w-7xl;
+}
+
+/* Full-width on mobile, constrained on desktop */
+.apex-responsive-width {
+  @apply w-full;
+  @apply sm:w-auto sm:max-w-md;
+  @apply md:max-w-lg;
+  @apply lg:max-w-xl;
+}
+
+/* ============================================
+   RESPONSIVE TABLES
+============================================ */
+
+/* Scrollable table wrapper */
+.apex-table-responsive {
+  @apply w-full overflow-x-auto;
+  @apply -mx-4 px-4;
+  @apply sm:mx-0 sm:px-0;
+}
+
+/* Table with minimum width */
+.apex-table {
+  @apply w-full min-w-[600px];
+  @apply sm:min-w-0;
+}
+
+/* ============================================
+   RESPONSIVE FORMS
+============================================ */
+
+/* Form grid - single column on mobile, multi on desktop */
+.apex-form-grid {
+  @apply grid gap-4;
+  @apply grid-cols-1;
+  @apply sm:grid-cols-2;
+  @apply lg:grid-cols-3;
+}
+
+/* Full-width form field */
+.apex-form-field-full {
+  @apply col-span-full;
+}
+
+/* ============================================
+   RESPONSIVE DIALOGS/MODALS
+============================================ */
+
+/* Dialog that's full screen on mobile */
+.apex-dialog {
+  @apply w-full h-full;
+  @apply sm:w-auto sm:h-auto;
+  @apply sm:max-w-lg sm:rounded-lg;
+  @apply md:max-w-xl;
+}
+
+/* ============================================
+   RESPONSIVE SIDEBARS
+============================================ */
+
+/* Sidebar - hidden on mobile, visible on desktop */
+.apex-sidebar {
+  @apply hidden;
+  @apply lg:block lg:w-64;
+}
+
+/* Content area with sidebar */
+.apex-main-with-sidebar {
+  @apply w-full;
+  @apply lg:ml-64;
+}
+
+/* ============================================
+   RESPONSIVE GRIDS
+============================================ */
+
+/* Product grid */
+.apex-product-grid {
+  @apply grid gap-4;
+  @apply grid-cols-1;
+  @apply sm:grid-cols-2;
+  @apply md:grid-cols-3;
+  @apply lg:grid-cols-4;
+}
+
+/* Card grid */
+.apex-card-grid {
+  @apply grid gap-4;
+  @apply grid-cols-1;
+  @apply sm:grid-cols-2;
+  @apply lg:grid-cols-3;
+}
+
+/* ============================================
+   RESPONSIVE TYPOGRAPHY
+============================================ */
+
+/* Heading that scales */
+.apex-heading {
+  @apply text-xl font-bold;
+  @apply sm:text-2xl;
+  @apply md:text-3xl;
+}
+
+/* Subheading that scales */
+.apex-subheading {
+  @apply text-lg font-semibold;
+  @apply sm:text-xl;
+  @apply md:text-2xl;
+}
+
+/* ============================================
+   RESPONSIVE BUTTONS
+============================================ */
+
+/* Full-width button on mobile */
+.apex-btn-responsive {
+  @apply w-full;
+  @apply sm:w-auto;
+}
+
+/* Button group - stacked on mobile, inline on desktop */
+.apex-btn-group {
+  @apply flex flex-col gap-2;
+  @apply sm:flex-row sm:gap-4;
+}
