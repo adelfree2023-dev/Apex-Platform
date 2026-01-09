@@ -206,12 +206,12 @@ export function QuickCheckoutForm({
     const total = subtotal;
 
     return (
-        <form onSubmit={handleSubmit} dir="rtl" className="max-w-6xl mx-auto">
-            {/* Two-Column Layout: Form (70%) | Summary (30%) */}
-            <div className="grid lg:grid-cols-[1fr,340px] gap-6 items-start">
+        <form onSubmit={handleSubmit} dir="rtl" className="max-w-7xl mx-auto px-4">
+            {/* 12-Column Grid: Form (8 cols) | Summary (4 cols) */}
+            <div className="grid grid-cols-12 gap-8 items-start">
 
-                {/* LEFT: Unified Form Container */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* MAIN COLUMN: Form Container (col-span-8) */}
+                <div className="col-span-12 lg:col-span-8 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     {/* Header with Breadcrumb */}
                     <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <h1 className="text-lg font-bold text-gray-900">إتمام الطلب</h1>
@@ -393,8 +393,8 @@ export function QuickCheckoutForm({
                     </div>
                 </div>
 
-                {/* RIGHT: Sticky Order Summary */}
-                <div className="lg:sticky lg:top-4">
+                {/* SIDEBAR: Sticky Order Summary (col-span-4) */}
+                <div className="col-span-12 lg:col-span-4 lg:sticky lg:top-5">
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                         <div className="bg-gray-50/80 px-5 py-3 border-b border-gray-100">
                             <h2 className="font-bold text-gray-900">ملخص الطلب</h2>
