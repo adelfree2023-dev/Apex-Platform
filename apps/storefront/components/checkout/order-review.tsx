@@ -89,7 +89,7 @@ export function OrderReview({
                 {/* Payment */}
                 <div className="bg-white rounded-2xl border p-6">
                     <div className="flex items-center gap-2 mb-4">
-                        {paymentData.method === "card" ? (
+                        {paymentData.method === "paymob" ? (
                             <CreditCard className="h-5 w-5 text-primary" />
                         ) : (
                             <Banknote className="h-5 w-5 text-primary" />
@@ -97,16 +97,46 @@ export function OrderReview({
                         <h3 className="font-semibold">Payment Method</h3>
                     </div>
                     <div className="text-sm text-gray-600">
-                        {paymentData.method === "card" ? (
+                        {paymentData.method === "cod" && (
                             <div>
-                                <p className="font-medium text-gray-900">Credit Card</p>
-                                <p>**** **** **** {paymentData.cardNumber?.slice(-4)}</p>
-                                <p>Expires: {paymentData.cardExpiry}</p>
+                                <p className="font-medium text-gray-900">💵 الدفع عند الاستلام</p>
+                                <p>ادفع نقداً عند استلام الطلب</p>
                             </div>
-                        ) : (
+                        )}
+                        {paymentData.method === "instapay" && (
                             <div>
-                                <p className="font-medium text-gray-900">Cash on Delivery</p>
-                                <p>Pay when you receive your order</p>
+                                <p className="font-medium text-gray-900">📱 InstaPay</p>
+                                <p>تحويل فوري من أي بنك</p>
+                            </div>
+                        )}
+                        {paymentData.method === "vodafone-cash" && (
+                            <div>
+                                <p className="font-medium text-gray-900">📲 فودافون كاش</p>
+                                <p>محفظة فودافون</p>
+                            </div>
+                        )}
+                        {paymentData.method === "etisalat-cash" && (
+                            <div>
+                                <p className="font-medium text-gray-900">📲 اتصالات كاش</p>
+                                <p>محفظة اتصالات</p>
+                            </div>
+                        )}
+                        {paymentData.method === "orange-cash" && (
+                            <div>
+                                <p className="font-medium text-gray-900">📲 أورنج كاش</p>
+                                <p>محفظة أورنج</p>
+                            </div>
+                        )}
+                        {paymentData.method === "fawry" && (
+                            <div>
+                                <p className="font-medium text-gray-900">🏪 فوري</p>
+                                <p>ادفع في أي فرع فوري</p>
+                            </div>
+                        )}
+                        {paymentData.method === "paymob" && (
+                            <div>
+                                <p className="font-medium text-gray-900">💳 بطاقة ائتمان</p>
+                                <p>Visa, Mastercard</p>
                             </div>
                         )}
                     </div>
