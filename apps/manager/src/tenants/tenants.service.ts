@@ -3,7 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto/tenant.dto';
 import { VendureService } from '../vendure/vendure.service';
 import * as bcrypt from 'bcrypt';
-import { UserRole, Prisma } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TenantsService implements OnModuleInit {
