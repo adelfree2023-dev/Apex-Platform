@@ -136,13 +136,13 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
     return (
         <form onSubmit={handleSubmit} dir="rtl">
             {/* FULL WIDTH CONTAINER */}
-            <div className="w-11/12 max-w-7xl mx-auto">
+            <div style={{ width: '92%', maxWidth: '1400px', margin: '0 auto' }}>
 
-                {/* 12-COLUMN GRID: Mobile-first stacked, Desktop 8/4 split */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
+                {/* FLEXBOX LAYOUT: Form (66%) | Summary (33%) */}
+                <div className="flex flex-col lg:flex-row gap-8" style={{ gap: '2rem' }}>
 
-                    {/* ========== MAIN FORM COLUMN (col-span-8 = 66%) ========== */}
-                    <div className="lg:col-span-8 order-2 lg:order-1">
+                    {/* ========== MAIN FORM COLUMN (66%) ========== */}
+                    <div className="order-2 lg:order-1" style={{ flex: '0 0 65%', minWidth: 0 }}>
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -283,9 +283,9 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                         </div>
                     </div>
 
-                    {/* ========== SIDEBAR: ORDER SUMMARY (col-span-4 = 33%) ========== */}
-                    <div className="lg:col-span-4 order-1 lg:order-2">
-                        <div className="lg:sticky lg:top-4">
+                    {/* ========== SIDEBAR: ORDER SUMMARY (33%) ========== */}
+                    <div className="order-1 lg:order-2" style={{ flex: '0 0 32%', minWidth: 0 }}>
+                        <div style={{ position: 'sticky', top: '1rem' }}>
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                                     <h2 className="text-lg font-bold text-gray-900">ملخص الطلب</h2>
