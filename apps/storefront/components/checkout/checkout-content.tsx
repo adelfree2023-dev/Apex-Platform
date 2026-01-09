@@ -234,7 +234,7 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
     };
 
     return (
-        <div className="max-w-2xl mx-auto">
+        <div className="w-full">
             {/* Error Display */}
             {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3" dir="rtl">
