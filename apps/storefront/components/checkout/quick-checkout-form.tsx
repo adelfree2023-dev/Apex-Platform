@@ -135,14 +135,14 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
 
     return (
         <form onSubmit={handleSubmit} dir="rtl">
-            {/* FULL WIDTH CONTAINER */}
-            <div style={{ width: '92%', maxWidth: '1400px', margin: '0 auto' }}>
+            {/* FULL WIDTH - NO SIDE MARGINS */}
+            <div style={{ width: '100%', padding: '0 24px' }}>
 
-                {/* FLEXBOX LAYOUT: Form (66%) | Summary (33%) */}
-                <div className="flex flex-col lg:flex-row gap-8" style={{ gap: '2rem' }}>
+                {/* FLEXBOX ROW LAYOUT */}
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '24px' }}>
 
-                    {/* ========== MAIN FORM COLUMN (66%) ========== */}
-                    <div className="order-2 lg:order-1" style={{ flex: '0 0 65%', minWidth: 0 }}>
+                    {/* ========== MAIN FORM COLUMN (62%) ========== */}
+                    <div style={{ flex: '1 1 62%', minWidth: 0 }}>
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                             {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -283,8 +283,8 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                         </div>
                     </div>
 
-                    {/* ========== SIDEBAR: ORDER SUMMARY (33%) ========== */}
-                    <div className="order-1 lg:order-2" style={{ flex: '0 0 32%', minWidth: 0 }}>
+                    {/* ========== SIDEBAR: ORDER SUMMARY (35%) ========== */}
+                    <div style={{ flex: '0 0 35%', minWidth: 0 }}>
                         <div style={{ position: 'sticky', top: '1rem' }}>
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
