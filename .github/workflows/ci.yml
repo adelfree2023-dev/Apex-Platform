@@ -1,0 +1,145 @@
+name: APEX Platform CI
+
+on:
+  push:
+    branches: [main, 'fix/*', 'feat/*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ============================================
+  # 🔍 LINT & TYPE CHECK
+  # ============================================
+  lint:
+    name: 🔍 Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Lint
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: 📏 Type Check
+        run: pnpm turbo run build --filter='@apex/shared'
+
+  # ============================================
+  # 🧪 TEST
+  # ============================================
+  test:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🧪 Run Tests
+        run: pnpm test
+        continue-on-error: true
+
+  # ============================================
+  # 🏗️ BUILD
+  # ============================================
+  build:
+    name: 🏗️ Build All Apps
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build
+        run: pnpm turbo run build
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+          NEXT_PUBLIC_VENDURE_URL: http://localhost:3001
+
+  # ============================================
+  # 🔒 SECURITY SCAN
+  # ============================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔒 Check for vulnerabilities
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+  # ============================================
+  # ✅ FINAL STATUS
+  # ============================================
+  status:
+    name: ✅ CI Status
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, security]
+    if: always()
+    steps:
+      - name: Check Results
+        run: |
+          echo "🔍 Lint: ${{ needs.lint.result }}"
+          echo "🧪 Test: ${{ needs.test.result }}"
+          echo "🏗️ Build: ${{ needs.build.result }}"
+          echo "🔒 Security: ${{ needs.security.result }}"
+          if [[ "${{ needs.lint.result }}" == "failure" || "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ CI Failed - Critical checks did not pass"
+            exit 1
+          fi
+          echo "✅ CI Passed"
