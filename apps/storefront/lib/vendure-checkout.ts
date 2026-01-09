@@ -423,3 +423,77 @@ export function customerAddressToInput(address: CustomerAddress): AddressInput {
         phoneNumber: address.phoneNumber,
     };
 }
+
+// =============================================================================
+// Set Customer for Order (Guest Checkout)
+// =============================================================================
+
+const SET_CUSTOMER_FOR_ORDER = `
+    mutation SetCustomerForOrder($input: CreateCustomerInput!) {
+        setCustomerForOrder(input: $input) {
+            ... on Order {
+                id
+                customer {
+                    id
+                    emailAddress
+                    firstName
+                    lastName
+                }
+            }
+            ... on EmailAddressConflictError {
+                errorCode
+                message
+            }
+            ... on AlreadyLoggedInError {
+                errorCode
+                message
+            }
+            ... on NoActiveOrderError {
+                errorCode
+                message
+            }
+        }
+    }
+`;
+
+interface CustomerInput {
+    firstName: string;
+    lastName: string;
+    emailAddress: string;
+    phoneNumber?: string;
+}
+
+export async function setCustomerForOrder(
+    channelToken: string,
+    input: CustomerInput
+): Promise<CheckoutResult> {
+    try {
+        const data = await vendureRequest<{
+            setCustomerForOrder:
+            | { id: string; customer: { id: string; emailAddress: string } }
+            | { errorCode: string; message: string };
+        }>(channelToken, SET_CUSTOMER_FOR_ORDER, { input });
+
+        const result = data.setCustomerForOrder;
+
+        if ('errorCode' in result) {
+            // If already logged in, that's fine - continue
+            if (result.errorCode === 'ALREADY_LOGGED_IN_ERROR') {
+                return { success: true };
+            }
+            return {
+                success: false,
+                errorCode: result.errorCode,
+                message: result.message,
+            };
+        }
+
+        return { success: true };
+    } catch (error) {
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to set customer",
+        };
+    }
+}
+

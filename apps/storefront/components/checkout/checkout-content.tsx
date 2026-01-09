@@ -12,6 +12,7 @@ import {
     setOrderShippingMethod,
     transitionOrderToState,
     getEligibleShippingMethods,
+    setCustomerForOrder,
 } from "@/lib/vendure-checkout";
 
 interface CheckoutContentProps {
@@ -30,10 +31,7 @@ export interface ShippingData {
 }
 
 export interface PaymentData {
-    method: "card" | "cod";
-    cardNumber?: string;
-    cardExpiry?: string;
-    cardCvc?: string;
+    method: "cod" | "instapay" | "vodafone-cash" | "etisalat-cash" | "orange-cash" | "fawry" | "paymob";
 }
 
 // Add payment mutation
@@ -174,7 +172,19 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
         setCustomerEmail(shippingData.email);
 
         try {
-            // 1. Set shipping address
+            // 1. Set customer data (REQUIRED before setting address)
+            const [firstName, ...lastNameParts] = shippingData.fullName.split(' ');
+            const customerResult = await setCustomerForOrder(channelToken, {
+                firstName: firstName || shippingData.fullName,
+                lastName: lastNameParts.join(' ') || '',
+                emailAddress: shippingData.email,
+            });
+
+            if (!customerResult.success) {
+                throw new Error(customerResult.message || "فشل في تعيين بيانات العميل");
+            }
+
+            // 2. Set shipping address
             const addressResult = await setOrderShippingAddress(channelToken, {
                 fullName: shippingData.fullName,
                 streetLine1: shippingData.address,
@@ -188,7 +198,7 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 throw new Error(addressResult.message || "فشل في تعيين العنوان");
             }
 
-            // 2. Set billing address (same as shipping)
+            // 3. Set billing address (same as shipping)
             await setOrderBillingAddress(channelToken, {
                 fullName: shippingData.fullName,
                 streetLine1: shippingData.address,
@@ -198,22 +208,21 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 phoneNumber: shippingData.phone,
             });
 
-            // 3. Set shipping method
+            // 4. Set shipping method
             const shippingMethods = await getEligibleShippingMethods(channelToken);
             if (shippingMethods.length > 0) {
                 await setOrderShippingMethod(channelToken, shippingMethods[0].id);
             }
 
-            // 4. Transition to ArrangingPayment
+            // 5. Transition to ArrangingPayment
             const transitionResult = await transitionOrderToState(channelToken, "ArrangingPayment");
 
             if (!transitionResult.success) {
                 throw new Error(transitionResult.message || "فشل في تحضير الطلب");
             }
 
-            // 5. Add payment
-            const paymentMethod = paymentData.method === "cod" ? "manual" : "stripe";
-            const paymentResult = await addPaymentToOrder(channelToken, paymentMethod);
+            // 6. Add payment - use the actual payment method code
+            const paymentResult = await addPaymentToOrder(channelToken, paymentData.method);
 
             if (!paymentResult?.code) {
                 throw new Error("فشل في إتمام الدفع");

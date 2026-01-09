@@ -20,13 +20,18 @@ const GOVERNORATES = [
     'شمال سيناء', 'سوهاج'
 ];
 
-// Payment Methods
+// Payment Methods - بالأولوية
 const PAYMENT_METHODS = [
+    // ⭐⭐⭐ الأولوية القصوى
     { id: "cod", name: "الدفع عند الاستلام", icon: "💵", desc: "نقداً للمندوب", enabled: true },
-    { id: "card", name: "بطاقة ائتمان", icon: "💳", desc: "Visa, Mastercard", enabled: false },
-    { id: "instapay", name: "InstaPay", icon: "📱", desc: "تحويل فوري", enabled: false },
-    { id: "vodafone", name: "فودافون كاش", icon: "🔴", desc: "محفظة إلكترونية", enabled: false },
-    { id: "fawry", name: "فوري", icon: "🟡", desc: "ادفع في فرع فوري", enabled: false },
+    { id: "instapay", name: "InstaPay", icon: "📱", desc: "تحويل فوري من أي بنك", enabled: true },
+    { id: "vodafone-cash", name: "فودافون كاش", icon: "📲", desc: "محفظة فودافون", enabled: true },
+    { id: "etisalat-cash", name: "اتصالات كاش", icon: "📲", desc: "محفظة اتصالات", enabled: true },
+    { id: "orange-cash", name: "أورنج كاش", icon: "📲", desc: "محفظة أورنج", enabled: true },
+    // ⭐⭐ أولوية متوسطة
+    { id: "fawry", name: "فوري", icon: "🏪", desc: "ادفع في أي فرع فوري", enabled: true },
+    // ⭐ أولوية منخفضة (قريباً)
+    { id: "paymob", name: "بطاقة ائتمان", icon: "💳", desc: "Visa, Mastercard", enabled: false },
 ];
 
 interface CartItem { id: string; name: string; quantity: number; price: number; image?: string; }
@@ -43,7 +48,8 @@ interface QuickCheckoutFormProps {
 interface FormData {
     fullName: string; phone: string; governorate: string; city: string;
     street: string; building: string; floor: string; apartment: string;
-    notes: string; email: string; paymentMethod: "cod" | "card";
+    notes: string; email: string;
+    paymentMethod: "cod" | "instapay" | "vodafone-cash" | "etisalat-cash" | "orange-cash" | "fawry" | "paymob";
 }
 
 export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelToken, cartTotal, cartItems = [] }: QuickCheckoutFormProps) {
@@ -221,7 +227,7 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                                         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden">
                                             {PAYMENT_METHODS.map((method) => (
                                                 <button key={method.id} type="button" disabled={!method.enabled}
-                                                    onClick={() => { if (method.enabled) { setFormData(prev => ({ ...prev, paymentMethod: method.id as "cod" | "card" })); setPaymentOpen(false); } }}
+                                                    onClick={() => { if (method.enabled) { setFormData(prev => ({ ...prev, paymentMethod: method.id as FormData["paymentMethod"] })); setPaymentOpen(false); } }}
                                                     className={`w-full px-4 py-3 flex items-center gap-3 text-right text-sm ${method.enabled ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'} ${formData.paymentMethod === method.id ? 'bg-primary/5' : ''}`}>
                                                     <span className="text-lg">{method.icon}</span>
                                                     <span className="flex-1 font-medium">{method.name}</span>
