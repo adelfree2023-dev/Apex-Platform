@@ -9,6 +9,7 @@ import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
 // Extend Express Request to include tenant context
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
     namespace Express {
         interface Request {

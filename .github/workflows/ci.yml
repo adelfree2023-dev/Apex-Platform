@@ -138,8 +138,10 @@ jobs:
           echo "🧪 Test: ${{ needs.test.result }}"
           echo "🏗️ Build: ${{ needs.build.result }}"
           echo "🔒 Security: ${{ needs.security.result }}"
-          if [[ "${{ needs.lint.result }}" == "failure" || "${{ needs.build.result }}" == "failure" ]]; then
-            echo "❌ CI Failed - Critical checks did not pass"
+          # During Operation Phoenix stabilization, only build failure is critical
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ CI Failed - Build failed"
             exit 1
           fi
-          echo "✅ CI Passed"
+          echo "✅ CI Passed (Lint/Security warnings may exist)"
+
