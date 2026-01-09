@@ -144,12 +144,12 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                     {/* ========== MAIN FORM (grows to fill) ========== */}
                     <div className="flex-1 lg:flex-[2]">
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                                <h1 className="text-xl font-bold text-gray-900">إتمام الطلب</h1>
-                                <Link href={`/${tenantSlug}/cart`} className="text-sm text-gray-500 hover:text-primary transition-colors">
+                            {/* Header with Breadcrumb */}
+                            <div className="px-5 py-4 border-b border-gray-100">
+                                <Link href={`/${tenantSlug}/cart`} className="text-xs text-gray-400 hover:text-primary transition-colors inline-flex items-center gap-1 mb-2">
                                     ← العودة للسلة
                                 </Link>
+                                <h1 className="text-lg font-bold text-gray-900">إتمام الطلب</h1>
                             </div>
 
                             <div className="p-5 space-y-4">
@@ -218,7 +218,7 @@ export function QuickCheckoutForm({ onSubmit, isProcessing, tenantSlug, channelT
                                         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${paymentOpen ? 'rotate-180' : ''}`} />
                                     </button>
                                     {paymentOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-xl z-50 overflow-hidden">
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden">
                                             {PAYMENT_METHODS.map((method) => (
                                                 <button key={method.id} type="button" disabled={!method.enabled}
                                                     onClick={() => { if (method.enabled) { setFormData(prev => ({ ...prev, paymentMethod: method.id as "cod" | "card" })); setPaymentOpen(false); } }}
