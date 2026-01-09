@@ -254,11 +254,11 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 channelToken={channelToken}
                 cartTotal={totalPrice}
                 cartItems={items.map(item => ({
-                    id: item.productVariant?.id || item.id,
-                    name: item.productVariant?.name || 'منتج',
+                    id: item.id,
+                    name: item.name,
                     quantity: item.quantity,
-                    price: item.linePriceWithTax,
-                    image: item.featuredAsset?.preview || item.productVariant?.featuredAsset?.preview
+                    price: item.price * item.quantity,
+                    image: item.image
                 }))}
             />
         </div>
