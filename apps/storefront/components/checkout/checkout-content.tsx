@@ -253,6 +253,13 @@ export function CheckoutContent({ tenantSlug, channelToken }: CheckoutContentPro
                 tenantSlug={tenantSlug}
                 channelToken={channelToken}
                 cartTotal={totalPrice}
+                cartItems={items.map(item => ({
+                    id: item.productVariant?.id || item.id,
+                    name: item.productVariant?.name || 'منتج',
+                    quantity: item.quantity,
+                    price: item.linePriceWithTax,
+                    image: item.featuredAsset?.preview || item.productVariant?.featuredAsset?.preview
+                }))}
             />
         </div>
     );
