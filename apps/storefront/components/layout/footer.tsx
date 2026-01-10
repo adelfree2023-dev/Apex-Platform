@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTenant } from '@/lib/tenant-context';
 
 export function Footer() {
-    const { tenant } = useTenant();
+    const { slug: tenant } = useTenant();
     const currentYear = new Date().getFullYear();
 
     return (

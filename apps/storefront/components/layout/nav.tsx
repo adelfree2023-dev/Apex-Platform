@@ -14,7 +14,7 @@ const navItems = [
 ];
 
 export function Nav() {
-    const { tenant } = useTenant();
+    const { slug: tenant } = useTenant();
     const pathname = usePathname();
 
     return (

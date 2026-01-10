@@ -6,7 +6,7 @@ import { useTenant } from '@/lib/tenant-context';
 import { Button } from '@/components/ui/button';
 
 export function Header() {
-    const { tenant } = useTenant();
+    const { slug: tenant } = useTenant();
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
