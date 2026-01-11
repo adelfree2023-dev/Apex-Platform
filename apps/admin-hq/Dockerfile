@@ -45,4 +45,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Cmd to start Next.js app
-CMD ["node", "apps/admin-hq/.next/standalone/server.js"]
+CMD ["node", "apps/admin-hq/.next/standalone/apps/admin-hq/server.js"]
