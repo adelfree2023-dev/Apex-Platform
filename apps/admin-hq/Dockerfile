@@ -7,7 +7,7 @@ FROM base AS builder
 WORKDIR /app
 COPY . .
 # Prune the workspace to just the admin-hq app
-RUN turbo prune --scope=@apex/admin-hq --docker
+RUN turbo prune --scope=admin-hq --docker
 
 # 2. Installer stage
 FROM base AS installer
@@ -27,7 +27,7 @@ COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 
 # Build the project
-RUN turbo run build --filter=@apex/admin-hq...
+RUN turbo run build --filter=admin-hq...
 
 # 3. Runner stage
 FROM base AS runner
