@@ -53,7 +53,7 @@ services:
       dockerfile: apps/engine/Dockerfile
     container_name: apex-engine
     ports:
-      - '3001:3001' # Shop API
+      - '3010:3001' # Shop API (Mapped to 3010 to avoid conflict)
       - '3002:3002' # Admin UI
     environment:
       - DB_HOST=vendure-db
