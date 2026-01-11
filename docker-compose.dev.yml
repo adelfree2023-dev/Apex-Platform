@@ -23,6 +23,20 @@ services:
     restart: always
 
   # ============================================
+  # Admin HQ (Next.js Frontend)
+  # ============================================
+  admin-hq:
+    build:
+      context: .
+      dockerfile: apps/admin-hq/Dockerfile
+    container_name: admin-hq
+    ports:
+      - '3002:3000' # Map internal 3000 to external 3002
+    environment:
+      - NEXT_PUBLIC_API_URL=http://34.18.154.179:3000/api
+    restart: always
+
+  # ============================================
   # Vendure Engine (E-commerce Core)
   # ============================================
   engine:
