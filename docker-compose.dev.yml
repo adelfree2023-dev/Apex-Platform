@@ -23,6 +23,34 @@ services:
     restart: always
 
   # ============================================
+  # Vendure Engine (E-commerce Core)
+  # ============================================
+  engine:
+    build:
+      context: .
+      dockerfile: apps/engine/Dockerfile
+    container_name: apex-engine
+    ports:
+      - '3001:3001' # Shop API
+      - '3002:3002' # Admin UI
+    environment:
+      - DB_HOST=vendure-db
+      - DB_PORT=5432
+      - DB_NAME=vendure
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379
+      - COOKIE_SECRET=dev-secret-key
+    volumes:
+      - ./apps/engine/static/assets:/app/apps/engine/static/assets
+    depends_on:
+      vendure-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # ============================================
   # SaaS Database (Prisma) - Manager API
   # ============================================
   saas-db:
