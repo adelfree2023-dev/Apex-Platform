@@ -9,7 +9,7 @@ export class StripeService {
 
   constructor(private configService: ConfigService) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    
+
     if (secretKey) {
       this.stripe = new Stripe(secretKey, {
         apiVersion: '2023-10-16',
@@ -32,7 +32,7 @@ export class StripeService {
    */
   async createCustomer(email: string, name: string, metadata?: Record<string, string>): Promise<Stripe.Customer | null> {
     if (!this.stripe) return null;
-    
+
     return this.stripe.customers.create({
       email,
       name,
@@ -52,7 +52,7 @@ export class StripeService {
     metadata?: Record<string, string>
   ): Promise<Stripe.Subscription | null> {
     if (!this.stripe) return null;
-    
+
     return this.stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -73,7 +73,7 @@ export class StripeService {
     newPriceId: string
   ): Promise<Stripe.Subscription | null> {
     if (!this.stripe) return null;
-    
+
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
 
     return this.stripe.subscriptions.update(subscriptionId, {
@@ -95,7 +95,7 @@ export class StripeService {
     cancelAtPeriodEnd: boolean = true
   ): Promise<Stripe.Subscription | null> {
     if (!this.stripe) return null;
-    
+
     if (cancelAtPeriodEnd) {
       return this.stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
@@ -114,7 +114,7 @@ export class StripeService {
     metadata?: Record<string, string>
   ): Promise<Stripe.PaymentIntent | null> {
     if (!this.stripe) return null;
-    
+
     return this.stripe.paymentIntents.create({
       amount, // Amount in smallest unit (piastres for EGP)
       currency,
@@ -130,13 +130,13 @@ export class StripeService {
    */
   constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event | null {
     if (!this.stripe) return null;
-    
+
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
     if (!webhookSecret) {
       this.logger.error('STRIPE_WEBHOOK_SECRET not configured');
       return null;
     }
-    
+
     return this.stripe.webhooks.constructEvent(
       payload,
       signature,
@@ -152,10 +152,38 @@ export class StripeService {
     returnUrl: string
   ): Promise<Stripe.BillingPortal.Session | null> {
     if (!this.stripe) return null;
-    
+
     return this.stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
+    });
+  }
+
+  /**
+   * Create Checkout Session for Subscription
+   */
+  async createCheckoutSession(
+    customerId: string,
+    priceId: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<Stripe.Checkout.Session | null> {
+    if (!this.stripe) return null;
+
+    return this.stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      allow_promotion_codes: true,
+      billing_address_collection: 'required',
+      payment_method_collection: 'if_required',
     });
   }
 

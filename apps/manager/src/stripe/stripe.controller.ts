@@ -11,6 +11,9 @@ import { Request, Response } from 'express';
 import { StripeService } from './stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
+import { UseGuards, Body, BadRequestException } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateCheckoutSessionDto } from './dto/stripe.dto';
 
 @Controller('stripe')
 export class StripeController {
@@ -20,6 +23,48 @@ export class StripeController {
         private stripeService: StripeService,
         private prisma: PrismaService,
     ) { }
+
+    /**
+     * Create Checkout Session
+     * POST /stripe/checkout-session
+     */
+    @UseGuards(JwtAuthGuard)
+    @Post('checkout-session')
+    async createCheckoutSession(
+        @Req() req: any,
+        @Body() dto: CreateCheckoutSessionDto,
+    ) {
+        const userId = req.user.userId;
+
+        // 1. Get Tenant for User
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { tenant: true },
+        });
+
+        if (!user || !user.tenant) {
+            throw new BadRequestException('User or Tenant not found');
+        }
+
+        const customerId = user.tenant.stripeCustomerId;
+        if (!customerId) {
+            throw new BadRequestException('Tenant has no Stripe Customer ID');
+        }
+
+        // 2. Create Session
+        const session = await this.stripeService.createCheckoutSession(
+            customerId,
+            dto.priceId,
+            dto.successUrl || 'http://localhost:3002/billing?success=true',
+            dto.cancelUrl || 'http://localhost:3002/billing?canceled=true',
+        );
+
+        if (!session) {
+            throw new BadRequestException('Stripe not configured or failed to create session');
+        }
+
+        return { url: session.url };
+    }
 
     /**
      * Stripe Webhook Handler
