@@ -33,6 +33,11 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Build the project
 RUN turbo run build --filter=admin-hq...
 
+# Fix: Copy static assets to standalone directory (for Monorepo structure)
+RUN mkdir -p apps/admin-hq/.next/standalone/apps/admin-hq/.next
+RUN cp -r apps/admin-hq/.next/static apps/admin-hq/.next/standalone/apps/admin-hq/.next/static
+RUN cp -r apps/admin-hq/public apps/admin-hq/.next/standalone/apps/admin-hq/public
+
 # 3. Runner stage
 FROM base AS runner
 WORKDIR /app
