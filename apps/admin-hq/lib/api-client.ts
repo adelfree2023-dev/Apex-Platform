@@ -15,3 +15,8 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+export const createCheckoutSession = async (priceId: string) => {
+  const response = await apiClient.post('/stripe/checkout-session', { priceId });
+  return response.data;
+};
