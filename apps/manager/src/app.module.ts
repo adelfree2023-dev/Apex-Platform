@@ -32,7 +32,7 @@ import { PaymentsModule } from './payments/payments.module';
                     limit: 10,
                 }],
                 storage: new ThrottlerStorageRedisService(
-                    config.get('REDIS_URL') || 'redis://localhost:6379'
+                    config.get<string>('REDIS_URL') || 'redis://localhost:6379'
                 ),
             }),
         }),
