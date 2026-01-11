@@ -11,7 +11,10 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
+    // console.log('🔐 Attaching Token:', token.substring(0, 10) + '...');
     config.headers.Authorization = 'Bearer ' + token;
+  } else {
+    console.warn('⚠️ No token found in localStorage!');
   }
   return config;
 });

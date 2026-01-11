@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 export default function CreateTenantPage() {
   const { createTenant, isCreating } = useTenants();
   const [error, setError] = useState("");
-  
+
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -20,9 +20,15 @@ export default function CreateTenantPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
+
     try {
-      await createTenant(formData);
+      await createTenant({
+        name: formData.name,
+        slug: formData.slug,
+        adminName: formData.adminName,
+        adminEmail: formData.email,
+        adminPassword: formData.password,
+      });
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || "Failed to create tenant");
@@ -36,53 +42,53 @@ export default function CreateTenantPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            
+
             {/* Store Information */}
             <div className="space-y-2">
               <Label>Store Name</Label>
-              <Input 
+              <Input
                 required
                 placeholder="My Awesome Store"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Store Slug (URL)</Label>
-              <Input 
+              <Input
                 placeholder="my-store (auto-generated if empty)"
                 value={formData.slug}
-                onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               />
             </div>
             <hr className="my-4" />
-            
+
             {/* Admin User Information */}
             <div className="space-y-2">
               <Label>Admin Name</Label>
-              <Input 
+              <Input
                 placeholder="John Doe"
                 value={formData.adminName}
-                onChange={(e) => setFormData({...formData, adminName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Admin Email (Login)</Label>
-              <Input 
+              <Input
                 required
                 type="email"
                 placeholder="admin@store.com"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Password</Label>
-              <Input 
+              <Input
                 required
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
             {error && (
