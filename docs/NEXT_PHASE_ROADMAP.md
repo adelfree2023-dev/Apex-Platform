@@ -1,129 +1,54 @@
-# 📋 NEXT PHASE ROADMAP
-## Technical Improvements Before Next Features
+# 🗺️ APEX PLATFORM - COMPLETE 20-PHASE ROADMAP
+## مع مسار كل مرحلة بالضبط (لا اجتهاد!)
 
-**Status:** Ready for Implementation  
-**Priority:** HIGH (Database Architecture)
-
----
-
-## 🔴 CRITICAL DATABASE FIXES (Do First!)
-
-### Issue 1: Hardcoded Payment Columns ⚠️
-**Problem:** `vodafoneCashNumber`, `orangeCashNumber` are hardcoded.  
-**Risk:** Can't add new wallets without migration.
-
-**Solution:**
-```prisma
-// BEFORE (Bad)
-vodafoneCashNumber String?
-orangeCashNumber String?
-
-// AFTER (Good)
-manualPaymentConfigs Json?
-// or
-model PaymentMethodConfig {
-  id          String @id
-  tenantId    String
-  methodType  String  // "vodafone", "instapay", "we_cash"
-  value       String  // Encrypted phone/username
-  isActive    Boolean
-}
-```
+**Last Updated:** 2026-01-09  
+**Base Path:** `C:\Users\Dell\Desktop\SaaS Adel\SaaS-APEX\apex-doc\01-20_FOUNDATION\`
 
 ---
 
-### Issue 2: Missing Soft Delete ⚠️
-**Problem:** No `deletedAt` field.  
-**Risk:** Accidental deletions lose data forever.
+## 🚩 Quality Gates (Checkpoints)
 
-**Solution:**
-```prisma
-// Add to: Tenant, User, Order, Product
-deletedAt DateTime?
+> [!IMPORTANT]
+> **Rule:** You MUST STOP at each Checkpoint and request "Human Review" before proceeding.
 
-// Query pattern
-where: { deletedAt: null }
-```
+
 
 ---
 
-### Issue 3: RBAC Limitations ⚠️
-**Problem:** Fixed roles only (SUPER_ADMIN, TENANT_ADMIN, TENANT_STAFF).  
-**Risk:** Can't grant granular permissions.
+## 📋 المراحل الـ 20 مع المسارات الكاملة
 
-**Solution:**
-```prisma
-// Option A: JSON permissions
-model TenantUser {
-  permissions Json? // ["VIEW_ORDERS", "EDIT_PRODUCTS"]
-}
+| Phase | Name | Status | 📂 Files |
+|-------|------|--------|----------|
+| **01** | Core Trinity | ✅ | `1/المرحلة_01_REVISED_Core_Trinity.md` |
+| **02** | Admin HQ Dashboard | ✅ | `2/المرحلة_02A,B,C_AdminHQ_*.md` |
+| **03** | Storefront Foundation | ✅ | `3/المرحلة_03A_Storefront_Setup.md` |
+| **04** | Authentication & Users | ✅ | `4/المرحلة_04A_Auth_Registration.md` |
+| **05** | Products & Catalog | ✅ | `5/المرحلة_05A_Products_Listing.md` |
+| **06** | Cart & Checkout | ✅ | `6/المرحلة_06A,B,C_Cart_*.md` |
+| **07** | Payments & Billing | ✅ | `7/المرحلة_07A-E_Payments_*.md` |
+| **08** | License Management | ⏳ | `8/المرحلة_08A_License_Management.md` |
+| **09** | Orders & Fulfillment | ⏳ | `9/المرحلة_09A_Orders_Fulfillment.md` |
+| **10** | Analytics & Reports | ⏳ | `10/المرحلة_10A_Analytics_Dashboard.md` |
+| **11** | Notifications System | ⏳ | `11/المرحلة_11A_Notifications_Email.md` |
+| **12** | Search & Filters | ⏳ | `12/المرحلة_12A_Search_Elasticsearch.md` |
+| **13** | Reviews & Ratings | ⏳ | `13/المرحلة_13A_Reviews_Ratings.md` |
+| **14** | Marketing & Discounts | ⏳ | `14/المرحلة_14A_Marketing_Discounts.md` |
+| **15** | Infrastructure CI/CD | ⏳ | `15/المرحلة_15A_Infrastructure_CI_CD.md` |
+| **16** | Mobile App (React Native) | ⏳ | `16/المرحلة_16A_Mobile_App_React_Native.md` |
+| **17** | Admin Dashboard Analytics | ⏳ | `17/المرحلة_17A_Admin_Dashboard_Analytics.md` |
+| **18** | Multi-Language (i18n) | ⏳ | `18/المرحلة_18A_Multi_Language_i18n.md` |
+| **19** | Performance Optimization | ⏳ | `19/المرحلة_19A_Performance_Optimization.md` |
+| **20** | Security Hardening | ⏳ | `20/المرحلة_20A_Security_Hardening.md` |
 
-// Option B: Full RBAC tables
-model Permission {
-  id   String @id
-  name String @unique // "VIEW_ORDERS"
-}
 
-model RolePermission {
-  roleId       String
-  permissionId String
-}
-```
 
----
+## 🚦 قواعد العمل
 
-### Issue 4: Encryption ✅ (Already Done)
-**Status:** EncryptionService created in Operation Phoenix.  
-**Location:** `apps/manager/src/common/services/encryption.service.ts`
+### للمبرمج:
+1. **قبل أي مرحلة** → اقرأ ملف `المرحلة_XX_*.md` المحدد
+2. **اتبع الخطوات بالضبط** كما مكتوبة
+3. **لا اجتهاد** - إذا شيء غير واضح، ارجع للملف أو اسأل
+4. **بعد الانتهاء** → حدث الـ status في هذا الملف
 
----
 
-## 📊 UPDATED PHASE ORDER
-
-| Priority | Phase | Description |
-|----------|-------|-------------|
-| **P0** | Database Fixes | JSON payments, Soft delete, RBAC |
-| **P1** | Phase 03 | Storefront Foundation |
-| **P2** | Phase 04 | Authentication & Users |
-| **P3** | Phase 05+ | Products, Cart, Checkout |
-
----
-
-## 🔧 REQUIRED INDEXES
-
-```prisma
-// Add to Order
-@@index([tenantId, status])
-
-// Add to Payment
-@@index([tenantId, status])
-
-// Add to any table with deletedAt
-@@index([deletedAt])
-```
-
----
-
-## ⏱️ ESTIMATED TIME
-
-| Task | Time |
-|------|------|
-| JSON Payment Config | 2h |
-| Soft Delete | 1h |
-| RBAC Enhancement | 3h |
-| Indexes | 30min |
-| **Total** | **6.5h** |
-
----
-
-## 📝 DEVELOPER MESSAGES
-
-### 🚦 START OF WORK:
-> **"ابدأ بقراءة docs/README.md ثم نفذ الإصلاحات الثلاث في schema.prisma قبل أي ميزة جديدة."**
-
-### 🏁 END OF WORK:
-> **"تأكد من تشغيل prisma migrate dev واختبار CI محلياً قبل الـ push."**
-
----
-
-*Last Updated: 2026-01-09*
+**Version:** 3.0 - Complete with All File Paths

@@ -473,6 +473,8 @@ model ProcessedWebhookEvent {
   provider    String             // "stripe", "paymob", "fawry"
   tenantId    String?            // If tenant-specific
   
+  status      WebhookStatus      @default(COMPLETED) // Migration will backfill
+  
   // Event Data (for debugging)
   data        Json?
   
@@ -484,5 +486,11 @@ model ProcessedWebhookEvent {
   @@index([provider])
   @@index([tenantId])
   @@map("processed_webhook_events")
+}
+
+enum WebhookStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }
 

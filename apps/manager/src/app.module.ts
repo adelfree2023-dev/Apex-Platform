@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from 'throttler-storage-redis';
 import { APP_GUARD } from '@nestjs/core';
 import { VendureModule } from './vendure/vendure.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -21,11 +22,20 @@ import { PaymentsModule } from './payments/payments.module';
             envFilePath: ['.env.local', '.env'],
         }),
 
-        // Rate limiting (protection against brute force)
-        ThrottlerModule.forRoot([{
-            ttl: 60000,    // Time window: 60 seconds
-            limit: 10,     // Max 10 requests per minute per IP
-        }]),
+        // Rate limiting (Redis Storage)
+        ThrottlerModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+                throttlers: [{
+                    ttl: 60000,
+                    limit: 10,
+                }],
+                storage: new ThrottlerStorageRedisService(
+                    config.get('REDIS_URL') || 'redis://localhost:6379'
+                ),
+            }),
+        }),
 
         // Core modules
         PrismaModule,

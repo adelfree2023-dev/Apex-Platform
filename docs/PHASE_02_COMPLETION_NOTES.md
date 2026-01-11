@@ -26,10 +26,10 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Server Start** | ✅ PASSED | Running on port 3003 |
-| **Login** | ✅ PASSED | Credentials: admin@apex.com / admin123 |
-| **Dashboard** | ✅ PASSED | Displays tenant stats |
-| **Create Tenant** | ✅ PASSED | Successfully calls Manager API |
+| **Server Start** | ⏳ PASSED | Running on port 3003 |
+| **Login** | ⏳ PASSED | Credentials: admin@apex.com / admin123 |
+| **Dashboard** | ⏳ PASSED | Displays tenant stats |
+| **Create Tenant** | ⏳ PASSED | Successfully calls Manager API |
 
 ---
 
@@ -75,3 +75,4 @@ apps/admin-hq/
 ---
 
 **Repo:** https://github.com/adelfree2023-dev/Apex-Platform
+

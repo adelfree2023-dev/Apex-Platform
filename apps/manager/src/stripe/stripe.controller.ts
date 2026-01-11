@@ -49,36 +49,48 @@ export class StripeController {
             return res.status(400).send(`Webhook Error: ${err.message}`);
         }
 
-        // ✅ IDEMPOTENCY CHECK
-        const alreadyProcessed = await this.prisma.processedWebhookEvent.findUnique({
-            where: { eventId: event.id },
-        });
-
-        if (alreadyProcessed) {
-            this.logger.log(`✅ Event ${event.id} already processed, skipping`);
-            return res.json({ received: true });
-        }
-
-        this.logger.log(`📨 Received webhook: ${event.type}`);
-
+        // 🔒 LOCK-FIRST PATTERN: Atomic Insert
+        // We attempt to create the record with status 'PENDING'.
+        // If it exists (Unique Constraint on eventId), this throws and we abort.
         try {
-            // Process event
-            await this.processWebhookEvent(event);
-
-            // ✅ Mark as processed
             await this.prisma.processedWebhookEvent.create({
                 data: {
                     eventId: event.id,
                     eventType: event.type,
                     provider: 'stripe',
+                    status: 'PENDING',
                     data: event.data.object as any,
                 },
+            });
+        } catch (error) {
+            // If error is Unique Constraint Violation, it means we are already processing it.
+            this.logger.warn(`🔒 Event ${event.id} locked/processed by another worker. Skipping.`);
+            return res.json({ received: true });
+        }
+
+        this.logger.log(`2️⃣ Acquired Lock for ${event.type} (${event.id}). Processing...`);
+
+        try {
+            // Process event
+            await this.processWebhookEvent(event);
+
+            // ✅ Update to COMPLETED
+            await this.prisma.processedWebhookEvent.update({
+                where: { eventId: event.id },
+                data: { status: 'COMPLETED' },
             });
 
             this.logger.log(`✅ Event ${event.id} processed successfully`);
             return res.json({ received: true });
         } catch (error: any) {
             this.logger.error(`❌ Error processing webhook:`, error);
+
+            // 🟥 Mark as FAILED so it can be debugged or retried manually
+            await this.prisma.processedWebhookEvent.update({
+                where: { eventId: event.id },
+                data: { status: 'FAILED', data: { error: error.message, ...event.data.object as any } },
+            });
+
             // Return 500 so Stripe retries
             return res.status(500).json({ error: 'Webhook processing failed' });
         }
