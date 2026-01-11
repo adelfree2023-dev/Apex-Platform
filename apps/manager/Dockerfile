@@ -19,7 +19,8 @@ COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install dependencies (using pnpm)
-RUN corepack enable
+# Bypass corepack network issues by installing directly via npm
+RUN npm install -g pnpm@8.15.0
 RUN pnpm install --no-frozen-lockfile
 
 # Config build
