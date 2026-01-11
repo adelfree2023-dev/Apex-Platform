@@ -15,6 +15,9 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@saas-db:5432/apex_saas
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev-secret-key
+      - STRIPE_SECRET_KEY=sk_test_placeholder_key_must_be_set_on_server
+      - STRIPE_WEBHOOK_SECRET=whsec_placeholder_secret_must_be_set_on_server
+      - STRIPE_CURRENCY=EGP
     depends_on:
       saas-db:
         condition: service_healthy
