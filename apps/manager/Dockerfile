@@ -2,6 +2,7 @@ FROM node:20-alpine AS base
 
 # 1. Install turbo globally
 RUN npm install turbo --global
+RUN apk add --no-cache libc6-compat openssl
 
 FROM base AS builder
 WORKDIR /app
