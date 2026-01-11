@@ -20,7 +20,7 @@ COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install dependencies (using pnpm)
 RUN corepack enable
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Config build
 COPY --from=builder /app/out/full/ .
