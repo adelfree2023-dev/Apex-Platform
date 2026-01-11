@@ -41,7 +41,11 @@ export class StripeController {
             where: { id: userId },
             include: {
                 tenants: {
-                    include: { tenant: true }
+                    include: {
+                        tenant: {
+                            include: { subscription: true }
+                        }
+                    }
                 }
             },
         });
@@ -51,9 +55,28 @@ export class StripeController {
         }
 
         const tenant = user.tenants[0].tenant;
-        const customerId = tenant.stripeCustomerId;
+        let customerId = tenant.subscription?.stripeCustomerId;
+
+        // Auto-create Stripe Customer if missing
         if (!customerId) {
-            throw new BadRequestException('Tenant has no Stripe Customer ID');
+            const stripeCustomer = await this.stripeService.createCustomer(user.email, tenant.name, { tenantId: tenant.id });
+            if (!stripeCustomer) {
+                throw new BadRequestException('Failed to create Stripe Customer');
+            }
+            customerId = stripeCustomer.id;
+
+            // Save to Subscription (Upsert to be safe)
+            await this.prisma.subscription.upsert({
+                where: { tenantId: tenant.id },
+                create: {
+                    tenantId: tenant.id,
+                    stripeCustomerId: customerId,
+                    status: 'INCOMPLETE',
+                },
+                update: {
+                    stripeCustomerId: customerId,
+                }
+            });
         }
 
         // 2. Create Session
