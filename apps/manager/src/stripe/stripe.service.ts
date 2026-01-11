@@ -31,6 +31,18 @@ export class StripeService {
    * Create Stripe Customer for a tenant
    */
   async createCustomer(email: string, name: string, metadata?: Record<string, string>): Promise<Stripe.Customer | null> {
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (secretKey?.includes('placeholder')) {
+      this.logger.warn('⚠️ Mocking createCustomer');
+      return {
+        id: 'cus_mock_123',
+        object: 'customer',
+        email,
+        name,
+        metadata,
+      } as any;
+    }
+
     if (!this.stripe) return null;
 
     return this.stripe.customers.create({
@@ -51,6 +63,18 @@ export class StripeService {
     priceId: string,
     metadata?: Record<string, string>
   ): Promise<Stripe.Subscription | null> {
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (secretKey?.includes('placeholder')) {
+      this.logger.warn('⚠️ Mocking createSubscription');
+      return {
+        id: 'sub_mock_123',
+        object: 'subscription',
+        customer: customerId,
+        status: 'active',
+        items: { data: [{ id: 'si_mock_123', price: { id: priceId } }] },
+      } as any;
+    }
+
     if (!this.stripe) return null;
 
     return this.stripe.subscriptions.create({
@@ -151,6 +175,15 @@ export class StripeService {
     customerId: string,
     returnUrl: string
   ): Promise<Stripe.BillingPortal.Session | null> {
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (secretKey?.includes('placeholder')) {
+      return {
+        id: 'portal_mock_123',
+        object: 'billing_portal.session',
+        url: returnUrl, // Just redirect back
+      } as any;
+    }
+
     if (!this.stripe) return null;
 
     return this.stripe.billingPortal.sessions.create({
