@@ -23,19 +23,21 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Real API Call
+      const { login: apiLogin } = await import('@/lib/api-client');
+      const response = await apiLogin({ email, password });
 
-      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@apex.com';
-      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123';
+      // response = { accessToken, refreshToken, user }
+      login(response.accessToken, response.user);
 
-      if (email === adminEmail && password === adminPassword) {
-        login(email, 'Super Admin');
+    } catch (err: any) {
+      console.error("Login error:", err);
+      // Handle 401 specifically
+      if (err.response?.status === 401) {
+        setError('Invalid email or password.');
       } else {
-        setError('Invalid credentials');
+        setError('Login failed. Server might be down.');
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
