@@ -72,10 +72,10 @@ export class TenantsService implements OnModuleInit {
                         },
                     });
 
-                } catch (error) {
+                } catch (error: any) {
                     this.logger.error(`Failed to create Vendure channel for ${slug}`, error);
                     // This will trigger transaction rollback
-                    throw new BadRequestException('Failed to setup commerce engine');
+                    throw new BadRequestException(`Failed to setup commerce engine: ${error.message}`);
                 }
             });
 
