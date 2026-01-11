@@ -54,7 +54,7 @@ services:
     container_name: apex-engine
     ports:
       - '3010:3001' # Shop API (Mapped to 3010 to avoid conflict)
-      - '3002:3002' # Admin UI
+      - '3020:3002' # Admin UI (Mapped to 3020 to avoid conflict)
     environment:
       - DB_HOST=vendure-db
       - DB_PORT=5432
