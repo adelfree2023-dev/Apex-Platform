@@ -26,6 +26,10 @@ RUN pnpm install --no-frozen-lockfile
 COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 
+# Bake Environment Variables
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build the project
 RUN turbo run build --filter=admin-hq...
 

@@ -29,6 +29,8 @@ services:
     build:
       context: .
       dockerfile: apps/admin-hq/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://34.18.154.179:3000/api
     container_name: admin-hq
     ports:
       - '3003:3000' # Map internal 3000 to external 3003
