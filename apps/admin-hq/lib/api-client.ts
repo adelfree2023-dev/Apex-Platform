@@ -20,7 +20,14 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export const createCheckoutSession = async (priceId: string) => {
-  const response = await apiClient.post('/stripe/checkout-session', { priceId });
+  // Dynamically determine the return URL based on where the user is currently accessing the app
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3003';
+
+  const response = await apiClient.post('/stripe/checkout-session', {
+    priceId,
+    successUrl: `${origin}/billing?success=true`,
+    cancelUrl: `${origin}/billing?canceled=true`,
+  });
   return response.data;
 };
 
