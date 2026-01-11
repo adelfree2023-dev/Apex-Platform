@@ -168,6 +168,20 @@ export class StripeService {
     successUrl: string,
     cancelUrl: string,
   ): Promise<Stripe.Checkout.Session | null> {
+
+    // ⚠️ MOCK MODE: Bypass Stripe if using placeholder keys
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (secretKey?.includes('placeholder')) {
+      this.logger.warn('⚠️ Using Mock Stripe Session (Placeholder Key Detected)');
+      return {
+        id: 'cs_test_mock_123',
+        object: 'checkout.session',
+        url: `${successUrl}&session_id=mock_session_123`,
+        status: 'open',
+        payment_status: 'unpaid',
+      } as any; // Cast to any to avoid mocking 100+ properties
+    }
+
     if (!this.stripe) return null;
 
     return this.stripe.checkout.sessions.create({
