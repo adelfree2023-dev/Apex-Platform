@@ -2,6 +2,27 @@ version: '3.9'
 
 services:
   # ============================================
+  # SaaS Manager API
+  # ============================================
+  manager:
+    build:
+      context: .
+      dockerfile: apps/manager/Dockerfile
+    container_name: manager
+    ports:
+      - '3000:3000'
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@saas-db:5432/apex_saas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-secret-key
+    depends_on:
+      saas-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # ============================================
   # SaaS Database (Prisma) - Manager API
   # ============================================
   saas-db:
@@ -16,7 +37,7 @@ services:
     volumes:
       - saas_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -36,7 +57,7 @@ services:
     volumes:
       - vendure_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -52,7 +73,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
