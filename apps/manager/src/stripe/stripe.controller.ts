@@ -39,14 +39,19 @@ export class StripeController {
         // 1. Get Tenant for User
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            include: { tenant: true },
+            include: {
+                tenants: {
+                    include: { tenant: true }
+                }
+            },
         });
 
-        if (!user || !user.tenant) {
+        if (!user || user.tenants.length === 0) {
             throw new BadRequestException('User or Tenant not found');
         }
 
-        const customerId = user.tenant.stripeCustomerId;
+        const tenant = user.tenants[0].tenant;
+        const customerId = tenant.stripeCustomerId;
         if (!customerId) {
             throw new BadRequestException('Tenant has no Stripe Customer ID');
         }
