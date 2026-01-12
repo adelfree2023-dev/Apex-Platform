@@ -1,0 +1,13 @@
+node_modules
+.next
+dist
+.git
+.turbo
+coverage
+*.log
+docs
+square-ui-master
+apps/*/node_modules
+apps/*/.next
+build_error.log
+deployment.log
