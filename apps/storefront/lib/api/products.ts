@@ -1,6 +1,6 @@
 // apps/storefront/lib/api/products.ts
 
-import { Product } from '@/types/storefront.d.ts';
+import { Product } from '@/types/storefront';
 import { gql } from 'graphql-request';
 
 // GraphQL query to fetch rich product data from Vendure

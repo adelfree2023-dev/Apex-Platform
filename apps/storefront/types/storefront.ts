@@ -3,10 +3,10 @@
 import { z } from 'zod';
 
 // Type inference from Zod schemas
-export type HomepageContent = z.infer<typeof import('./lib/schemas').HomepageContentSchema>;
-export type ProductFilter = z.infer<typeof import('./lib/schemas').ProductFilterSchema>;
-export type CartUpdate = z.infer<typeof import('./lib/schemas').CartUpdateSchema>;
-export type CheckoutForm = z.infer<typeof import('./lib/schemas').CheckoutFormSchema>;
+export type HomepageContent = z.infer<typeof import('../lib/schemas').HomepageContentSchema>;
+export type ProductFilter = z.infer<typeof import('../lib/schemas').ProductFilterSchema>;
+export type CartUpdate = z.infer<typeof import('../lib/schemas').CartUpdateSchema>;
+export type CheckoutForm = z.infer<typeof import('../lib/schemas').CheckoutFormSchema>;
 
 // Vendure GraphQL response types
 export interface Product {
