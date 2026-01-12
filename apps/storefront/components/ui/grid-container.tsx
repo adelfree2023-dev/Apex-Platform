@@ -1,6 +1,5 @@
 // apps/storefront/components/ui/grid-container.tsx
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GridContainerProps } from '@/types/grid-container.d.ts';
 
 interface GridContainerProps {
