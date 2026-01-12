@@ -67,27 +67,29 @@ export async function GetRichProducts(limit = 8, offset = 0): Promise<Product[]>
       name: product.name,
       slug: product.slug,
       description: product.description || '',
-      images: product.assets.map((asset: any) => ({
+      price: 0, // Root price can be derived or set to 0 if not on main object
+      salePrice: null,
+      images: (product.assets || []).map((asset: any) => ({
         url: asset.url,
         alt: asset.alt || '',
       })),
-      variants: product.variants.map((variant: any) => ({
+      variants: (product.variants || []).map((variant: any) => ({
         id: variant.id,
-        sku: variant.sku,
-        price: variant.price,
-        salePrice: variant.salePrice,
-        stock: variant.stock,
-        attributes: variant.attributes.map((attr: any) => ({
+        sku: variant.sku || '',
+        price: variant.price || 0,
+        salePrice: variant.salePrice || null,
+        stock: variant.stock || 0,
+        attributes: (variant.attributes || []).map((attr: any) => ({
           name: attr.name,
           value: attr.value,
         })),
       })),
-      categories: product.collections.map((collection: any) => ({
+      categories: (product.collections || []).map((collection: any) => ({
         id: collection.id,
         name: collection.name,
         slug: collection.slug,
       })),
-      reviews: [], // Placeholder - will be added later via separate query
+      reviews: [],
     }));
   } catch (error) {
     console.error('Error fetching products:', error);
