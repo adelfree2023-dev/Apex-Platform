@@ -66,7 +66,7 @@ services:
     volumes:
       - ./apps/engine/static/assets:/app/apps/engine/static/assets
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3001/shop-api" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:3001/health" ]
       interval: 10s
       timeout: 5s
       retries: 10
