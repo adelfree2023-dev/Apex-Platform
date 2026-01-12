@@ -1,6 +1,6 @@
-// apps/storefront/components/ui/grid-container.tsx
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { GridContainerProps } from '@/types/grid-container.d.ts';
+// REMOVED BAD IMPORT HERE
 
 interface GridContainerProps {
   children: React.ReactNode;
@@ -15,10 +15,7 @@ export default function GridContainer({
   gap = 4,
   className = '',
 }: GridContainerProps) {
-  // Calculate grid template columns based on the number of columns
   const gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-
-  // Calculate gap in rem units
   const gapRem = `${gap / 4}rem`;
 
   return (
