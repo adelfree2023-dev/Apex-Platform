@@ -56,5 +56,6 @@ COPY --from=installer /app .
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Cmd to start Next.js app (Fallback to standard start)
-CMD ["pnpm", "--filter", "storefront", "start"]
+# Cmd to start Next.js app (using npm to avoid missing pnpm binary)
+WORKDIR /app/apps/storefront
+CMD ["npm", "start"]
