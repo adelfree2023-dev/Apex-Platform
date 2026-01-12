@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   // Unique build ID to prevent Server Action cache issues after deployments
   generateBuildId: async () => `build-${Date.now()}`,
 
+  // Create a standalone folder via Docker
+  output: "standalone",
+
+
   // Image configuration for external assets
   images: {
     remotePatterns: [
