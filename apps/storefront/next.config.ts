@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   generateBuildId: async () => `build-${Date.now()}`,
 
   // Create a standalone folder via Docker
-  output: "standalone",
+
 
 
   // Image configuration for external assets

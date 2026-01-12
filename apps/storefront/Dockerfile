@@ -35,11 +35,7 @@ ENV NEXT_PUBLIC_MANAGER_URL=$NEXT_PUBLIC_MANAGER_URL
 # Build the project
 RUN turbo run build --filter=storefront...
 
-# Fix: Copy static assets to standalone directory (for Monorepo structure)
-RUN mkdir -p apps/storefront/.next/standalone/apps/storefront/.next
-RUN cp -r apps/storefront/.next/static apps/storefront/.next/standalone/apps/storefront/.next/static
-# Copy public if exists (ensure directory exists first to avoid error if empty)
-RUN cp -r apps/storefront/public apps/storefront/.next/standalone/apps/storefront/public || true
+
 
 # 3. Runner stage
 FROM base AS runner
