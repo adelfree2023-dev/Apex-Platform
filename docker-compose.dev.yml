@@ -59,6 +59,7 @@ services:
       - '3004:3000' # Map internal 3000 to external 3004 (to identify verify)
     environment:
       - NEXT_PUBLIC_VENDURE_API_URL=http://34.18.154.179:3010/shop-api
+      - NEXT_PUBLIC_VENDURE_SHOP_API_URL=http://34.18.154.179:3010/shop-api
       - NEXT_PUBLIC_MANAGER_URL=http://34.18.154.179:3000
       - MANAGER_API_URL=http://manager:3000/api
     depends_on:
