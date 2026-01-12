@@ -9,7 +9,7 @@ interface GridContainerProps {
   className?: string;
 }
 
-export default function GridContainer({
+export function GridContainer({
   children,
   cols = 4,
   gap = 4,
