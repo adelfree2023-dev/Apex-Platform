@@ -48,15 +48,7 @@ export class TenantsController {
     async delete(@Param('id') id: string) {
         await this.tenantsService.delete(id);
     }
-    /**
-     * Seed realistic products
-     * POST /api/tenants/slug/:slug/seed
-     */
-    @Post('slug/:slug/seed')
-    @HttpCode(HttpStatus.OK)
-    async seed(@Param('slug') slug: string) {
-        return this.tenantsService.seedProducts(slug);
-    }
+
     /**
      * Seed realistic products
      * POST /api/tenants/slug/:slug/seed
