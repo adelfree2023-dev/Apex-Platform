@@ -40,6 +40,6 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 USER nestjs
 
-COPY --from=installer /app .
+COPY --from=installer --chown=nestjs:nodejs /app .
 
 CMD ["node", "apps/engine/dist/index.js"]
