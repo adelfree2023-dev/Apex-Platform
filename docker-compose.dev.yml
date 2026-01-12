@@ -25,7 +25,7 @@ services:
       redis:
         condition: service_healthy
       engine:
-        condition: service_started
+        condition: service_healthy
     restart: always
 
   # ============================================
@@ -65,6 +65,11 @@ services:
       - COOKIE_SECRET=dev-secret-key
     volumes:
       - ./apps/engine/static/assets:/app/apps/engine/static/assets
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3001/shop-api" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       vendure-db:
         condition: service_healthy
