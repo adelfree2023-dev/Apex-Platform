@@ -57,4 +57,13 @@ export class TenantsController {
     async seed(@Param('slug') slug: string) {
         return this.tenantsService.seedProducts(slug);
     }
+    /**
+     * Seed realistic products
+     * POST /api/tenants/slug/:slug/seed
+     */
+    @Post('slug/:slug/seed')
+    @HttpCode(HttpStatus.OK)
+    async seed(@Param('slug') slug: string) {
+        return this.tenantsService.seedProducts(slug);
+    }
 }

@@ -45,6 +45,29 @@ services:
     restart: always
 
   # ============================================
+  # Storefront (Next.js Customer App)
+  # ============================================
+  storefront:
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+      args:
+        NEXT_PUBLIC_VENDURE_API_URL: http://34.18.154.179:3010/shop-api
+        NEXT_PUBLIC_MANAGER_URL: http://34.18.154.179:3000
+    container_name: storefront
+    ports:
+      - '3004:3000' # Map internal 3000 to external 3004 (to identify verify)
+    environment:
+      - NEXT_PUBLIC_VENDURE_API_URL=http://34.18.154.179:3010/shop-api
+      - NEXT_PUBLIC_MANAGER_URL=http://34.18.154.179:3000
+    depends_on:
+      manager:
+        condition: service_started
+      engine:
+        condition: service_healthy
+    restart: always
+
+  # ============================================
   # Vendure Engine (E-commerce Core)
   # ============================================
   engine:
