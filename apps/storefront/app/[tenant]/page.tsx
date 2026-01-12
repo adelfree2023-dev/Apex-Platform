@@ -1,75 +1,101 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { getTenantBySlug } from "@/lib/manager-client";
-import { getProducts } from "@/lib/vendure-client";
-import { ProductGrid } from "@/components/products/product-grid";
-import { CollectionGrid } from "@/components/products/collection-grid";
+import { Product } from '@/types/storefront';
+import GridContainer from '@/components/ui/grid-container';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+import Link from 'next/link';
+import { GetRichProducts } from '@/lib/api/products'; // Real GraphQL query
 
-export default async function StoreHomePage({ params }: { params: Promise<{ tenant: string }> }) {
-  const { tenant: slug } = await params;
-
-  // 1. Get Tenant Details (for Token)
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) return null;
-
-  // 2. Fetch Real Products from Vendure
-  const rawProducts = await getProducts(tenant.vendureChannelToken || '');
-
-  // 3. Map Data to UI Component Shape
-  const products = rawProducts.map(p => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    description: p.description,
-    price: p.variants[0]?.priceWithTax || p.variants[0]?.price || 0,
-    currencyCode: p.variants[0]?.currencyCode || 'USD',
-    featuredAsset: p.featuredAsset
-  }));
-
-  // 4. Mock Collections (Until Phase 7)
-  const collections = [
-    { id: '1', name: 'Electronics', slug: 'electronics', color: '#3b82f6', productCount: 4 },
-    { id: '2', name: 'Fashion', slug: 'fashion', color: '#ec4899', productCount: 8 },
-    { id: '3', name: 'Home', slug: 'home', color: '#10b981', productCount: 3 },
-  ];
+// Apply Square UI - LNFiles pattern: Dashboard-style homepage with cards and grid
+export default async function HomePage() {
+  // Fetch real data using the actual GraphQL query
+  const products = await GetRichProducts();
 
   return (
-    <div className="space-y-10">
-      {/* Dynamic Hero Section */}
-      <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-2xl p-8 md:p-16 text-center shadow-lg relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2629&auto=format&fit=crop')] opacity-10 bg-cover bg-center" />
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-6 bg-white/10 text-white border-none hover:bg-white/20">
-            Welcome to {tenant.name}
-          </Badge>
-          <h1 className="text-4xl md:text-7xl font-bold mb-6 tracking-tighter">
-            Premium Deals
-          </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Discover our curated collection of high-quality products.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Button size="lg" className="rounded-full px-8 bg-white text-gray-900 hover:bg-gray-100">
-              Shop Now
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 border-white/20 text-white hover:bg-white/10">
-              Collections
-            </Button>
+    <div className="space-y-8">
+      {/* Hero Section - Compact card-based hero (Square UI style) */}
+      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg border-none">
+        <CardHeader className="p-8 md:p-12">
+          <CardTitle className="text-3xl font-bold mb-2">Welcome to Apex Store</CardTitle>
+          <p className="text-lg opacity-90 mb-6">Discover premium products for every lifestyle.</p>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/shop">
+              <Button variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-6">
+                Browse All Products
+              </Button>
+            </Link>
+            <Link href="/deals">
+              <Button variant="outline" className="border-white text-white hover:bg-white/20 hover:text-white px-6">
+                View Deals
+              </Button>
+            </Link>
           </div>
+        </CardHeader>
+      </Card>
+
+      {/* Featured Products Grid - Square UI - LNFiles grid pattern */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center px-1">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Featured Products</h2>
+          <Link href="/shop?category=featured" className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+            View All →
+          </Link>
         </div>
-      </section>
 
-      {/* Main Content Area */}
-      <section>
-        <CollectionGrid collections={collections} />
+        {products.length > 0 ? (
+          <GridContainer cols={4} gap={6}>
+            {products.map((product) => (
+              <Card key={product.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-gray-200">
+                <CardContent className="p-0">
+                  <div className="relative aspect-square overflow-hidden bg-gray-100">
+                    {product.images?.[0]?.url ? (
+                      <Image
+                        src={product.images[0].url}
+                        alt={product.images[0].alt || product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        No Image
+                      </div>
+                    )}
+                    {product.salePrice && product.price > product.salePrice && (
+                      <Badge className="absolute top-2 left-2 bg-red-600 text-white shadow-sm">Sale</Badge>
+                    )}
+                  </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">Featured Products</h2>
-          <Button variant="ghost">View All</Button>
-        </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-lg text-gray-900 line-clamp-1 mb-1 group-hover:text-blue-600 transition-colors">{product.name}</h3>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 h-10">{product.description}</p>
 
-        <ProductGrid products={products} />
-      </section>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-lg text-gray-900">
+                          {product.salePrice ? `$${(product.salePrice / 100).toFixed(2)}` : `$${(product.price / 100).toFixed(2)}`}
+                        </span>
+                        {product.salePrice && product.price > product.salePrice && (
+                          <span className="text-xs text-gray-500 line-through">
+                            ${(product.price / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-full hover:bg-black hover:text-white transition-colors">
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </GridContainer>
+        ) : (
+          <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+            <p className="text-gray-500 text-lg">No products found.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
