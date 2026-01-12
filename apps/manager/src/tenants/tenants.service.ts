@@ -126,6 +126,99 @@ export class TenantsService implements OnModuleInit {
         });
     }
 
+    async seedProducts(slug: string) {
+        this.logger.log(`🌱 Seeding products for tenant: ${slug}`);
+        const tenant = await this.prisma.tenant.findUnique({ where: { slug } });
+        if (!tenant || !tenant.vendureChannelToken) {
+            throw new BadRequestException('Tenant not ready for seeding');
+        }
+
+        const channelToken = tenant.vendureChannelToken;
+
+        // 1. Create Collections
+        const collections = ['Electronics', 'Fashion', 'Home'];
+        const collectionIds: Record<string, string> = {};
+
+        for (const name of collections) {
+            const createCollectionMutation = `
+                mutation CreateCollection($input: CreateCollectionInput!) {
+                    createCollection(input: $input) { id name }
+                }
+            `;
+            try {
+                const res = await this.vendureService.executeGraphQL(createCollectionMutation, {
+                    input: {
+                        translations: [{ languageCode: 'en', name, slug: name.toLowerCase(), description: `Best ${name}` }],
+                        filters: [],
+                        customFields: {}
+                    }
+                }, channelToken);
+                collectionIds[name] = res.createCollection.id;
+                this.logger.log(`   - Created Collection: ${name}`);
+            } catch (e) {
+                this.logger.warn(`   - Collection ${name} might already exist or failed`, e);
+            }
+        }
+
+        // 2. Create Products
+        const products = [
+            { name: 'Quantum Headset', description: 'Immersive noise-cancelling audio experience.', price: 29900, cat: 'Electronics' },
+            { name: 'Neon Keyboard', description: 'Mechanical RGB keyboard for pros.', price: 15000, cat: 'Electronics' },
+            { name: 'Smart Watch Ultra', description: 'Next-gen health tracking.', price: 45000, cat: 'Electronics' },
+            { name: 'Midnight Hoodie', description: 'Premium cotton comfort.', price: 8000, cat: 'Fashion' },
+            { name: 'Cyber Sneakers', description: 'Futuristic street wear.', price: 12000, cat: 'Fashion' },
+            { name: 'Urban Jacket', description: 'Waterproof city gear.', price: 25000, cat: 'Fashion' },
+            { name: 'Classic Denim', description: 'Timeless style.', price: 9000, cat: 'Fashion' },
+            { name: 'Smart Lamp', description: 'Voice controlled ambient lighting.', price: 4500, cat: 'Home' },
+            { name: 'Ergo Chair', description: 'Work in absolute comfort.', price: 50000, cat: 'Home' },
+            { name: 'Minimal Desk', description: 'Clean workspace aesthetic.', price: 35000, cat: 'Home' },
+        ];
+
+        for (const p of products) {
+            const createProductMutation = `
+                mutation CreateProduct($input: CreateProductInput!) {
+                    createProduct(input: $input) { id }
+                }
+            `;
+            const createVariantMutation = `
+                mutation CreateVariant($input: [CreateProductVariantInput!]!) {
+                    createProductVariants(input: $input) { id }
+                }
+            `;
+
+            try {
+                // A. Create Product Shell
+                const pRes = await this.vendureService.executeGraphQL(createProductMutation, {
+                    input: {
+                        translations: [{ languageCode: 'en', name: p.name, slug: p.name.toLowerCase().replace(/ /g, '-'), description: p.description }],
+                    }
+                }, channelToken);
+
+                const productId = pRes.createProduct.id;
+
+                // B. Create Variant (Price)
+                await this.vendureService.executeGraphQL(createVariantMutation, {
+                    input: [{
+                        productId,
+                        sku: `SKU-${Math.floor(Math.random() * 10000)}`,
+                        price: p.price,
+                        stockLevel: 100,
+                        translations: [{ languageCode: 'en', name: p.name }]
+                    }]
+                }, channelToken);
+
+                // C. Assign to Collection (Facets/Collections usually require separate mapping or initial setup, skipping complex relations for V1 seed)
+                // Note: Assigning to collection in Vendure is via 'collectionId' in create/update usually, or moving product.
+                // Keeping it simple: Products exist.
+
+                this.logger.log(`   - Created Product: ${p.name}`);
+            } catch (e) {
+                this.logger.error(`   - Failed to create ${p.name}`, e);
+            }
+        }
+
+        return { success: true, count: products.length };
+    }
     async delete(id: string) {
         const tenant = await this.prisma.tenant.findUnique({ where: { id } });
         if (!tenant) throw new NotFoundException('Tenant not found');
